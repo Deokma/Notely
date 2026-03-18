@@ -1,4 +1,4 @@
-package com.example.notepad;
+package by.deokma.notely;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -28,7 +28,7 @@ public class NotepadData {
 
         public Note() {
             id = UUID.randomUUID().toString().substring(0, 8);
-            title = "Новая заметка";
+            title = "New Note";
             content = "";
         }
     }

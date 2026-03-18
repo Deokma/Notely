@@ -1,6 +1,6 @@
-package com.example.notepad.fabric;
+package by.deokma.notely.fabric;
 
-import com.example.notepad.NotepadMod;
+import by.deokma.notely.NotepadMod;
 import net.fabricmc.api.ModInitializer;
 
 public class NotepadModFabric implements ModInitializer {

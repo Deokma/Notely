@@ -1,4 +1,10 @@
 {
+  "notely.button.new_note": "New Note",
+  "notely.message.select_note": "Select a note on the left",
+  "notely.hint.start_writing": "Start writing... (Markdown supported)",
+  "notely.menu.open": "Open",
+  "notely.menu.rename": "Rename",
+  "notely.menu.delete": "Delete",
   "gui.notepad.title": "Notepad",
   "gui.notepad.placeholder": "Start writing...",
   "gui.notepad.save": "Save",

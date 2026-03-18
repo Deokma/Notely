@@ -1,7 +1,7 @@
-package com.example.notepad.gui;
+package by.deokma.notely.gui;
 
-import com.example.notepad.NotepadData;
-import com.example.notepad.NotepadData.Note;
+import by.deokma.notely.NotepadData;
+import by.deokma.notely.NotepadData.Note;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -65,17 +65,14 @@ public class NotepadScreen extends Screen {
     private int contextMenuX = 0, contextMenuY = 0;
 
 
-    private Button btnAdd, btnPin, btnClose, btnTodo, btnHelp;
+    private Button btnAdd, btnPin, btnClose, btnHelp;
 
     // Битовые маски для модификаторов (GLFW)
     private static final int MOD_CTRL  = 2;
     private static final int MOD_SHIFT = 1;
     private final List<Button> colorBtns = new ArrayList<>();
 
-    // Кешированный список отрендеренных строк для кликов
-    // Масштаб шрифта (1 = стандарт, меняется Ctrl+Scroll)
-    private float fontScale = 1.0f;
-    private int lineH() { return Math.round(12 * fontScale); }
+    private int lineH() { return 12; }
 
     // Undo: хранит последние 50 состояний контента
     private final java.util.ArrayDeque<String> undoStack = new java.util.ArrayDeque<>();
@@ -117,18 +114,18 @@ public class NotepadScreen extends Screen {
         int edX = ox + LIST_W + 4;
 
         btnAdd = addRenderableWidget(Button.builder(
-            Component.literal("+ Заметка"), b -> newNote()
+            Component.literal("New Note"), b -> newNote()
         ).pos(ox + 3, oy + H - TORN - 18).size(LIST_W - 6, 14).build());
 
-        btnTodo = addRenderableWidget(Button.builder(
-            Component.literal("[ ] Todo"), b -> insertAtCursor("[ ] ")
-        ).pos(edX, toolY).size(52, 13).build());
+//        btnTodo = addRenderableWidget(Button.builder(
+//            Component.literal("[ ] Todo"), b -> insertAtCursor("[ ] ")
+//        ).pos(edX, toolY).size(52, 13).build());
 
 //        btnHr = addRenderableWidget(Button.builder(
 //            Component.literal("--- HR"), b -> insertAtCursor("---\n")
 //        ).pos(edX + 55, toolY).size(40, 13).build());
 
-btnPin = addRenderableWidget(Button.builder(
+        btnPin = addRenderableWidget(Button.builder(
             Component.literal("\uD83D\uDCCC"), b -> toggleColorPicker() // Pin
         ).pos(ox + W - 34, toolY).size(14, 13).build());
 
@@ -155,7 +152,7 @@ btnPin = addRenderableWidget(Button.builder(
     private void refreshWidgets() {
         boolean has = selected != null;
         btnPin.active = has;
-        btnTodo.active = has;
+        //btnTodo.active = has;
         //btnHr.active = has;
         colorBtns.forEach(b -> b.visible = pickingColor && has);
     }
@@ -175,22 +172,22 @@ btnPin = addRenderableWidget(Button.builder(
 
     private void createHelpNote() {
         Note note = NotepadData.createNote();
-        note.title = "Справка по синтаксису";
+        note.title = "Syntax Help";
         note.content =
-            "# Заголовок H1\n" +
-            "## Заголовок H2\n" +
-            "### Заголовок H3\n" +
+            "# Heading H1\n" +
+            "## Heading H2\n" +
+            "### Heading H3\n" +
             "---\n" +
-            "> Цитата\n" +
-            "`код в строке`\n" +
+            "> Quote\n" +
+            "`Code in text`\n" +
             "---\n" +
-            "[ ] Задача не выполнена\n" +
-            "[x] Задача выполнена\n" +
+            "[ ] Task not completed\n" +
+            "[x] Task completed\n" +
             "---\n" +
-            "Обычный текст. Нажми Pin\n" +
-            "чтобы закрепить как стикер.\n" +
-            "ПКМ по заметке для меню.\n" +
-            "Ctrl+Backspace — стереть слово.";
+            "Plain text. Push 📌\n" +
+            "for pin like sticker.\n" +
+            "RMB on a note in menu.\n" +
+            "Ctrl+Backspace — clean word.";
         selected = note;
         cursor = note.content.length();
         textOffset = 0;
@@ -252,7 +249,7 @@ btnPin = addRenderableWidget(Button.builder(
 
     private void commitRename() {
         if (selected != null)
-            selected.title = titleBuffer.isBlank() ? "Заметка" : titleBuffer.trim();
+            selected.title = titleBuffer.isBlank() ? "Note" : titleBuffer.trim();
         renamingTitle = false;
         NotepadData.save();
     }
@@ -525,7 +522,7 @@ btnPin = addRenderableWidget(Button.builder(
         // Пункты меню: 0=открыть, 1=переименовать, 2=удалить
         int menuX = contextMenuX, menuY = contextMenuY;
         int itemH = 14, menuW = 90;
-        String[] items = { "Открыть", "Переименовать", "Удалить" };
+        String[] items = { "Open", "Rename", "Delete" };
         for (int i = 0; i < items.length; i++) {
             int itemY = menuY + i * itemH;
             if (ix >= menuX && ix < menuX + menuW && iy >= itemY && iy < itemY + itemH) {
@@ -585,12 +582,6 @@ btnPin = addRenderableWidget(Button.builder(
 
     @Override
     public boolean mouseScrolled(double mx, double my, double dx, double dy) {
-        boolean ctrl = hasControlDown();
-        if (ctrl) {
-            // Ctrl+Scroll — масштаб шрифта
-            fontScale = Mth.clamp(fontScale + (float) dy * 0.1f, 0.5f, 2.0f);
-            return true;
-        }
         if ((int) mx < ox + LIST_W) {
             listOffset = Mth.clamp((int) (listOffset - dy), 0,
                 Math.max(0, NotepadData.notes.size() - visibleListRows()));
@@ -674,7 +665,7 @@ btnPin = addRenderableWidget(Button.builder(
     }
 
     private void drawList(GuiGraphics g, int mx, int my) {
-        g.drawString(font, "Заметки", ox + 4, oy + TORN + 4, COL_HINT, false);
+        g.drawString(font, "Notes", ox + 4, oy + TORN + 4, COL_HINT, false);
 
         int clipY1 = oy + TORN + 14, clipY2 = oy + H - TORN - 20;
         g.enableScissor(ox + 1, clipY1, ox + LIST_W - 1, clipY2);
@@ -717,7 +708,7 @@ btnPin = addRenderableWidget(Button.builder(
         int clipTop = contentY - 2, clipBot = oy + H - TORN - 20;
 
         if (selected == null) {
-            g.drawString(font, "Выберите заметку слева", ex, contentY + 20, COL_HINT, false);
+            g.drawString(font, "Select left note", ex, contentY + 20, COL_HINT, false);
             return;
         }
 
@@ -729,26 +720,19 @@ btnPin = addRenderableWidget(Button.builder(
                 int cx = ex + font.width(titleBuffer.substring(0, titleCursor));
                 g.fill(cx, titleY - 1, cx + 1, titleY + 10, COL_TEXT);
             }
-            g.drawString(font, "Enter — сохранить", ox + LIST_W + 210, titleY + 1, COL_HINT, false);
+            g.drawString(font, "Enter — save", ox + LIST_W + 210, titleY + 1, COL_HINT, false);
         } else {
             String title = font.plainSubstrByWidth(selected.title, W - LIST_W - 70);
             g.drawString(font, title, ex, titleY + 1, COL_TEXT, false);
-            g.drawString(font, " [клик для переименования]", ex + font.width(title), titleY + 1, COL_HINT, false);
+            g.drawString(font, " [click for rename]", ex + font.width(title), titleY + 1, COL_HINT, false);
         }
 
         // Контент с масштабированием шрифта
         g.enableScissor(ox + LIST_W + 2, clipTop, ox + W - 2, clipBot);
-        if (fontScale != 1.0f) {
-            g.pose().pushPose();
-            // Масштабируем относительно левого верхнего угла области текста
-            g.pose().translate(ex, contentY, 0);
-            g.pose().scale(fontScale, fontScale, 1.0f);
-            g.pose().translate(-ex, -contentY, 0);
-        }
 
         renderedLines.clear();
         if (selected.content.isEmpty()) {
-            g.drawString(font, "Начните писать... (поддерживается MD)", ex, contentY, COL_HINT, false);
+            g.drawString(font, "Start writing...", ex, contentY, COL_HINT, false);
         }
 
         String text = selected.content;
@@ -778,14 +762,15 @@ btnPin = addRenderableWidget(Button.builder(
                 if (dy >= clipTop - lineH() && dy <= clipBot) {
                     renderedLines.add(new RenderedLine(segCharStart, segCharEnd, dy, type, raw));
                     // Если курсор на этой строке — показываем сырой текст (Obsidian-режим)
-                    boolean cursorOnThisLine = (li == cursorLineIndex) && !renamingTitle;
-                    if (cursorOnThisLine) {
-                        // Рисуем подсветку строки
-                        g.fill(ex - 4, dy - 1, ex + editorMaxW(), dy + lineH(), 0x18000000);
-                        g.drawString(font, raw, ex, dy, COL_HINT, false);
-                    } else {
-                        drawLine(g, seg, ex + xOff, dy, type, ci, segCharStart + prefixLen(type));
-                    }
+//                    boolean cursorOnThisLine = (li == cursorLineIndex) && !renamingTitle;
+//                    if (cursorOnThisLine) {
+//                        // Рисуем подсветку строки
+//                        g.fill(ex - 4, dy - 1, ex + editorMaxW(), dy + lineH(), 0x18000000);
+//                        g.drawString(font, raw, ex, dy, COL_HINT, false);
+//                    } else {
+//                        drawLine(g, seg, ex + xOff, dy, type, ci, segCharStart + prefixLen(type));
+//                    }
+                    drawLine(g, seg, ex + xOff, dy, type, ci, segCharStart + prefixLen(type));
                 }
 
                 // Курсор
@@ -819,10 +804,6 @@ btnPin = addRenderableWidget(Button.builder(
             int thumbY = clipTop + (int) ((barH - thumbH) * scroll);
             g.fill(ox + W - 7, clipTop, ox + W - 5, clipBot, 0x33000000);
             g.fill(ox + W - 7, thumbY, ox + W - 5, thumbY + thumbH, 0x88000000);
-        }
-
-        if (fontScale != 1.0f) {
-            g.pose().popPose();
         }
         g.disableScissor();
     }
@@ -866,7 +847,7 @@ btnPin = addRenderableWidget(Button.builder(
         g.fill(x, y, x + 8, y + 8, 0x33000000);
         if (checked) {
             g.fill(x + 1, y + 1, x + 7, y + 7, COL_CHECKED);
-            g.drawString(font, "v", x, y, 0xFFFFFFFF, false);
+            g.drawString(font, "x", x, y, 0xFFFFFFFF, false);
         } else {
             g.fill(x + 1, y + 1, x + 7, y + 7, 0xFFEEE0C4);
         }
@@ -876,7 +857,7 @@ btnPin = addRenderableWidget(Button.builder(
         if (contextMenuNoteIdx < 0) return;
         int menuX = contextMenuX, menuY = contextMenuY;
         int itemH = 14, menuW = 90;
-        String[] items = { "Открыть", "Переименовать", "Удалить" };
+        String[] items = { "Open", "Rename", "Delete" };
         // Фон меню
         g.fill(menuX - 1, menuY - 1, menuX + menuW + 1, menuY + items.length * itemH + 1, COL_BORDER);
         g.fill(menuX, menuY, menuX + menuW, menuY + items.length * itemH, COL_LIST);
@@ -970,14 +951,42 @@ btnPin = addRenderableWidget(Button.builder(
 
     private List<String> wrapLine(String line, int maxW) {
         List<String> result = new ArrayList<>();
-        if (line.isEmpty()) { result.add(""); return result; }
-        String rem = line;
-        while (!rem.isEmpty()) {
-            String fit = font.plainSubstrByWidth(rem, maxW);
-            if (fit.isEmpty()) fit = rem.substring(0, 1);
-            result.add(fit);
-            rem = rem.substring(fit.length());
+        if (line.isEmpty()) {
+            result.add("");
+            return result;
         }
+
+        String remaining = line;
+
+        while (!remaining.isEmpty()) {
+
+            // Если вся строка влезает — добавляем и выходим
+            if (font.width(remaining) <= maxW) {
+                result.add(remaining);
+                break;
+            }
+
+            int cut = remaining.length();
+
+            // Ищем максимальную длину, которая влезает
+            while (cut > 0 && font.width(remaining.substring(0, cut)) > maxW) {
+                cut--;
+            }
+
+            // Ищем последний пробел до cut
+            int spaceIndex = remaining.lastIndexOf(' ', cut);
+
+            if (spaceIndex > 0) {
+                // Перенос по слову
+                //result.add(remaining.substring(0, spaceIndex));
+                remaining = remaining.substring(spaceIndex + 1);
+            } else {
+                // Нет пробелов → режем как есть (длинное слово)
+                result.add(remaining.substring(0, cut));
+                remaining = remaining.substring(cut);
+            }
+        }
+
         return result;
     }
 

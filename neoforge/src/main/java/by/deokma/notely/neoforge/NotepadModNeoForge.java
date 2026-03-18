@@ -1,9 +1,9 @@
-package com.example.notepad.neoforge;
+package by.deokma.notely.neoforge;
 
-import com.example.notepad.NotepadMod;
-import com.example.notepad.NotepadModClient;
-import com.example.notepad.gui.NotepadScreen;
-import com.example.notepad.gui.PinnedNotesOverlay;
+import by.deokma.notely.NotepadMod;
+import by.deokma.notely.NotepadModClient;
+import by.deokma.notely.gui.NotepadScreen;
+import by.deokma.notely.gui.PinnedNotesOverlay;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;

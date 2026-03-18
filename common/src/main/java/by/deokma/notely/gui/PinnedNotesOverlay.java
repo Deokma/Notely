@@ -1,8 +1,8 @@
-package com.example.notepad.gui;
+package by.deokma.notely.gui;
 
-import com.example.notepad.NotepadData;
-import com.example.notepad.NotepadData.Note;
-import com.example.notepad.NotepadData.Sticker;
+import by.deokma.notely.NotepadData;
+import by.deokma.notely.NotepadData.Note;
+import by.deokma.notely.NotepadData.Sticker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 
@@ -119,7 +119,7 @@ public class PinnedNotesOverlay {
             gfx.fill(x + PAD, ty, x + PAD + 7, ty + 7, 0x44000000);
             if (done) {
                 gfx.fill(x + PAD + 1, ty + 1, x + PAD + 6, ty + 6, (alpha << 24) | 0x004A8A3A);
-                gfx.drawString(mc.font, "v", x + PAD, ty, (alpha << 24) | 0x00FFFFFF, false);
+                gfx.drawString(mc.font, "x", x + PAD, ty, (alpha << 24) | 0x00FFFFFF, false);
             } else {
                 gfx.fill(x + PAD + 1, ty + 1, x + PAD + 6, ty + 6, darken(s.color, 1.05f));
             }

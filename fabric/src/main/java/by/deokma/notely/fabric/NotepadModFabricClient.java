@@ -1,8 +1,8 @@
-package com.example.notepad.fabric;
+package by.deokma.notely.fabric;
 
-import com.example.notepad.NotepadModClient;
-import com.example.notepad.gui.PinnedNotesOverlay;
-import com.example.notepad.gui.NotepadScreen;
+import by.deokma.notely.NotepadModClient;
+import by.deokma.notely.gui.PinnedNotesOverlay;
+import by.deokma.notely.gui.NotepadScreen;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;

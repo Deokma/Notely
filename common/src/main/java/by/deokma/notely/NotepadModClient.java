@@ -1,7 +1,7 @@
-package com.example.notepad;
+package by.deokma.notely;
 
-import com.example.notepad.gui.NotepadScreen;
-import com.example.notepad.gui.PinnedNotesOverlay;
+import by.deokma.notely.gui.NotepadScreen;
+import by.deokma.notely.gui.PinnedNotesOverlay;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import org.lwjgl.glfw.GLFW;

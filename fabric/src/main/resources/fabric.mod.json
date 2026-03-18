@@ -8,8 +8,12 @@
   "license": "MIT",
   "environment": "client",
   "entrypoints": {
-    "main": ["com.example.notepad.fabric.NotepadModFabric"],
-    "client": ["com.example.notepad.fabric.NotepadModFabricClient"]
+    "main": [
+      "by.deokma.notely.fabric.NotepadModFabric"
+    ],
+    "client": [
+      "by.deokma.notely.fabric.NotepadModFabricClient"
+    ]
   },
   "mixins": [],
   "depends": {
