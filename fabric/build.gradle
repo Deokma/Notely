@@ -1,0 +1,53 @@
+plugins {
+    id 'fabric-loom'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+}
+
+loom {
+    mods {
+        notepad {
+            sourceSet sourceSets.main
+            sourceSet project(':common').sourceSets.main
+        }
+    }
+    runs {
+        client {
+            ideConfigGenerated true
+            vmArgs '-Xmx2G', '-Xms512M'
+        }
+    }
+}
+
+configurations {
+    shadowCommon {
+        canBeConsumed = false
+        canBeResolved = true
+    }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings loom.officialMojangMappings()
+
+    modImplementation "net.fabricmc:fabric-loader:${project.fabric_loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+    compileOnly project(path: ':common', configuration: 'namedElements')
+    shadowCommon project(path: ':common', configuration: 'transformProductionFabric')
+}
+
+shadowJar {
+    configurations = [project.configurations.shadowCommon]
+    archiveClassifier = 'dev-shadow'
+}
+
+remapJar {
+    dependsOn shadowJar
+    mustRunAfter shadowJar
+    inputFile = file(shadowJar.archivePath)
+    archiveClassifier = ''
+}
+
+jar {
+    archiveClassifier = 'dev'
+}

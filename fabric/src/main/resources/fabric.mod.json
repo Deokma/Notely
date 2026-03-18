@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "notepad",
+  "version": "1.0.0",
+  "name": "Notepad Mod",
+  "description": "Client-side notepad with sticky notes overlay",
+  "authors": ["YourName"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "main": ["com.example.notepad.fabric.NotepadModFabric"],
+    "client": ["com.example.notepad.fabric.NotepadModFabricClient"]
+  },
+  "mixins": [],
+  "depends": {
+    "fabricloader": ">=0.16.9",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
