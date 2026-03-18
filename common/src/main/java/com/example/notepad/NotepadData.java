@@ -38,6 +38,7 @@ public class NotepadData {
         public float x, y;
         public float width, height;
         public int color;
+        public boolean transparent = false; // полупрозрачный режим
 
         public Sticker(String noteId, float x, float y, int color) {
             this.noteId = noteId;

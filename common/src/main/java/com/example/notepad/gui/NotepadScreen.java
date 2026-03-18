@@ -13,66 +13,86 @@ import java.util.List;
 
 public class NotepadScreen extends Screen {
 
-    private static final int W = 420;
-    private static final int H = 270;
+    private static final int W = 440;
+    private static final int H = 280;
     private static final int LIST_W = 130;
     private static final int TORN = 6;
     private static final int ROW_H = 22;
-    private static final int LINE_H = 11;
 
-    // Цвета интерфейса
     private static final int COL_BG         = 0xFFEEE0C4;
     private static final int COL_LIST       = 0xFFD8C9A8;
     private static final int COL_SEL        = 0xFFC4B08A;
     private static final int COL_HOVER      = 0xFFCFBF9A;
     private static final int COL_BORDER     = 0xFF8B7355;
     private static final int COL_TORN       = 0xFFB8A888;
-    private static final int COL_RULED_LINE = 0x22886644;
-    private static final int COL_MARGIN_RED = 0x88CC4433;
+    private static final int COL_RULE       = 0x22886644;
+    private static final int COL_RED_MARGIN = 0x88CC4433;
     private static final int COL_TEXT       = 0xFF1A0A00;
     private static final int COL_HINT       = 0xFF9B8A6A;
     private static final int COL_SHADOW     = 0x55000000;
     private static final int COL_CHECKED    = 0xFF4A8A3A;
     private static final int COL_TOOLBAR    = 0xFFCFBF9A;
+    private static final int COL_H1         = 0xFF3A2000;
+    private static final int COL_H2         = 0xFF5A3800;
+    private static final int COL_QUOTE      = 0xFF7A6A50;
+    private static final int COL_CODE_BG    = 0x22000000;
 
     static final int[] STICKER_COLORS = {
         0xFFFFF176, 0xFFFFCC80, 0xFFA5D6A7,
         0xFF90CAF9, 0xFFCE93D8, 0xFFEF9A9A
     };
 
-    // Рваные края (генерируются один раз)
     private final int[] tornTop, tornBot;
 
-    // Текущая выбранная заметка
     private Note selected = null;
-
-    // Позиция экрана
     private int ox, oy;
 
-    // Скролл списка и текста
     private int listOffset = 0;
     private int textOffset = 0;
 
-    // Курсор в тексте
     private int cursor = 0;
     private int cursorTimer = 0;
     private boolean cursorVisible = true;
 
-    // Режим редактирования заголовка
     private boolean renamingTitle = false;
     private String titleBuffer = "";
     private int titleCursor = 0;
 
-    // Выбор цвета стикера
     private boolean pickingColor = false;
 
-    // Виджеты
-    private Button btnAdd, btnDelete, btnPin, btnClose, btnTodo, btnHr;
+    // Контекстное меню (ПКМ по заметке в списке)
+    private int contextMenuNoteIdx = -1;  // индекс заметки под курсором ПКМ
+    private int contextMenuX = 0, contextMenuY = 0;
+
+
+    private Button btnAdd, btnPin, btnClose, btnTodo, btnHelp;
+
+    // Битовые маски для модификаторов (GLFW)
+    private static final int MOD_CTRL  = 2;
+    private static final int MOD_SHIFT = 1;
     private final List<Button> colorBtns = new ArrayList<>();
+
+    // Кешированный список отрендеренных строк для кликов
+    // Масштаб шрифта (1 = стандарт, меняется Ctrl+Scroll)
+    private float fontScale = 1.0f;
+    private int lineH() { return Math.round(12 * fontScale); }
+
+    // Undo: хранит последние 50 состояний контента
+    private final java.util.ArrayDeque<String> undoStack = new java.util.ArrayDeque<>();
+    private static final int MAX_UNDO = 50;
+
+    // Номер строки (по \n) на которой стоит курсор — для Obsidian-режима
+    private int cursorLineIndex = 0;
+
+    private final List<RenderedLine> renderedLines = new ArrayList<>();
+
+    // Одна видимая строка: позиция в тексте, Y на экране, тип
+    private record RenderedLine(int charStart, int charEnd, int screenY, LineType type, String raw) {}
+
+    private enum LineType { NORMAL, H1, H2, H3, TODO_OPEN, TODO_DONE, HR, QUOTE, CODE, BOLD }
 
     public NotepadScreen() {
         super(Component.empty());
-
         java.util.Random rng = new java.util.Random(42);
         int cols = (W - LIST_W) / 4 + 2;
         tornTop = new int[cols];
@@ -81,7 +101,6 @@ public class NotepadScreen extends Screen {
             tornTop[i] = rng.nextInt(TORN);
             tornBot[i] = rng.nextInt(TORN);
         }
-
         if (!NotepadData.notes.isEmpty()) {
             selected = NotepadData.notes.get(0);
             cursor = selected.content.length();
@@ -94,72 +113,90 @@ public class NotepadScreen extends Screen {
         oy = (height - H) / 2;
         colorBtns.clear();
 
-        int toolbarY = oy + TORN + 3;
-        int editorX = ox + LIST_W + 4;
+        int toolY = oy + TORN + 3;
+        int edX = ox + LIST_W + 4;
 
         btnAdd = addRenderableWidget(Button.builder(
-            Component.literal("+ Заметка"),
-            b -> newNote()
+            Component.literal("+ Заметка"), b -> newNote()
         ).pos(ox + 3, oy + H - TORN - 18).size(LIST_W - 6, 14).build());
 
         btnTodo = addRenderableWidget(Button.builder(
-            Component.literal("[x] Todo"),
-            b -> insertTodo()
-        ).pos(editorX, toolbarY).size(54, 13).build());
+            Component.literal("[ ] Todo"), b -> insertAtCursor("[ ] ")
+        ).pos(edX, toolY).size(52, 13).build());
 
-        btnHr = addRenderableWidget(Button.builder(
-            Component.literal("--- HR"),
-            b -> insertSeparator()
-        ).pos(editorX + 57, toolbarY).size(40, 13).build());
+//        btnHr = addRenderableWidget(Button.builder(
+//            Component.literal("--- HR"), b -> insertAtCursor("---\n")
+//        ).pos(edX + 55, toolY).size(40, 13).build());
 
-        btnDelete = addRenderableWidget(Button.builder(
-            Component.literal("Del"),
-            b -> deleteSelected()
-        ).pos(ox + W - 58, toolbarY).size(24, 13).build());
+btnPin = addRenderableWidget(Button.builder(
+            Component.literal("\uD83D\uDCCC"), b -> toggleColorPicker() // Pin
+        ).pos(ox + W - 34, toolY).size(14, 13).build());
 
-        btnPin = addRenderableWidget(Button.builder(
-            Component.literal("Pin"),
-            b -> toggleColorPicker()
-        ).pos(ox + W - 32, toolbarY).size(24, 13).build());
+        btnHelp = addRenderableWidget(Button.builder(
+            Component.literal("?"), b -> createHelpNote()
+        ).pos(ox + LIST_W - 16, toolY).size(14, 13).build());
 
         btnClose = addRenderableWidget(Button.builder(
-            Component.literal("X"),
-            b -> onClose()
-        ).pos(ox + W - 18, oy + 2).size(15, 13).build());
+            Component.literal("X"), b -> onClose()
+        ).pos(ox + W - 18, toolY).size(15, 13).build());
 
         for (int i = 0; i < STICKER_COLORS.length; i++) {
             final int ci = i;
             Button cb = addRenderableWidget(Button.builder(
-                Component.literal(" "),
-                b -> pinWithColor(STICKER_COLORS[ci])
-            ).pos(ox + W - 18 - (STICKER_COLORS.length - i) * 17, oy + 17).size(15, 11).build());
+                Component.literal(" "), b -> pinWithColor(STICKER_COLORS[ci])
+            ).pos(ox + W - 50 - i * 17, toolY + 1).size(15, 11).build());
             cb.visible = false;
             colorBtns.add(cb);
         }
 
-        refreshWidgetState();
+        refreshWidgets();
     }
 
-    private void refreshWidgetState() {
-        boolean hasNote = selected != null;
-        btnDelete.active = hasNote;
-        btnPin.active = hasNote;
-        btnTodo.active = hasNote;
-        btnHr.active = hasNote;
-        colorBtns.forEach(b -> b.visible = pickingColor && hasNote);
+    private void refreshWidgets() {
+        boolean has = selected != null;
+        btnPin.active = has;
+        btnTodo.active = has;
+        //btnHr.active = has;
+        colorBtns.forEach(b -> b.visible = pickingColor && has);
     }
 
-    // ---- Операции с заметками ----
+    // ---- Заметки ----
 
     private void newNote() {
-        Note note = NotepadData.createNote();
-        selected = note;
+        Note n = NotepadData.createNote();
+        selected = n;
         cursor = 0;
         textOffset = 0;
         renamingTitle = true;
-        titleBuffer = note.title;
+        titleBuffer = n.title;
         titleCursor = titleBuffer.length();
-        refreshWidgetState();
+        refreshWidgets();
+    }
+
+    private void createHelpNote() {
+        Note note = NotepadData.createNote();
+        note.title = "Справка по синтаксису";
+        note.content =
+            "# Заголовок H1\n" +
+            "## Заголовок H2\n" +
+            "### Заголовок H3\n" +
+            "---\n" +
+            "> Цитата\n" +
+            "`код в строке`\n" +
+            "---\n" +
+            "[ ] Задача не выполнена\n" +
+            "[x] Задача выполнена\n" +
+            "---\n" +
+            "Обычный текст. Нажми Pin\n" +
+            "чтобы закрепить как стикер.\n" +
+            "ПКМ по заметке для меню.\n" +
+            "Ctrl+Backspace — стереть слово.";
+        selected = note;
+        cursor = note.content.length();
+        textOffset = 0;
+        renamingTitle = false;
+        NotepadData.save();
+        refreshWidgets();
     }
 
     private void deleteSelected() {
@@ -169,7 +206,7 @@ public class NotepadScreen extends Screen {
         cursor = selected != null ? selected.content.length() : 0;
         textOffset = 0;
         renamingTitle = false;
-        refreshWidgetState();
+        refreshWidgets();
     }
 
     private void openNote(Note note) {
@@ -179,39 +216,27 @@ public class NotepadScreen extends Screen {
         textOffset = 0;
         renamingTitle = false;
         pickingColor = false;
-        refreshWidgetState();
+        refreshWidgets();
     }
 
-    // ---- Вставка блоков ----
+    // ---- Вставка ----
 
-    private void insertTodo() {
+    private void insertAtCursor(String text) {
         if (selected == null) return;
-        String text = selected.content;
-        // Переносим на новую строку если находимся не в начале строки
-        boolean needsNewline = cursor > 0 && text.charAt(cursor - 1) != '\n';
-        insert((needsNewline ? "\n" : "") + "[ ] ");
+        String t = selected.content;
+        // Переносим на новую строку если не в начале строки
+        boolean needNewline = cursor > 0 && t.charAt(cursor - 1) != '\n';
+        String insert = (needNewline ? "\n" : "") + text;
+        if (t.length() + insert.length() > NotepadData.MAX_CONTENT_LENGTH) return;
+        selected.content = t.substring(0, cursor) + insert + t.substring(cursor);
+        cursor += insert.length();
     }
 
-    private void insertSeparator() {
-        if (selected == null) return;
-        String text = selected.content;
-        boolean needsNewline = cursor > 0 && text.charAt(cursor - 1) != '\n';
-        // Используем дефисы вместо спецсимволов
-        insert((needsNewline ? "\n" : "") + "--------------------\n");
-    }
-
-    private void insert(String s) {
-        if (selected == null) return;
-        if (selected.content.length() + s.length() > NotepadData.MAX_CONTENT_LENGTH) return;
-        selected.content = selected.content.substring(0, cursor) + s + selected.content.substring(cursor);
-        cursor += s.length();
-    }
-
-    // ---- Закрепление стикера ----
+    // ---- Стикер ----
 
     private void toggleColorPicker() {
         pickingColor = !pickingColor;
-        refreshWidgetState();
+        refreshWidgets();
     }
 
     private void pinWithColor(int color) {
@@ -220,15 +245,22 @@ public class NotepadScreen extends Screen {
         float py = 40f + (NotepadData.stickers.size() * 25) % (height - 140);
         NotepadData.pinNote(selected.id, px, py, color);
         pickingColor = false;
-        refreshWidgetState();
+        refreshWidgets();
+    }
+
+    // ---- Переименование ----
+
+    private void commitRename() {
+        if (selected != null)
+            selected.title = titleBuffer.isBlank() ? "Заметка" : titleBuffer.trim();
+        renamingTitle = false;
+        NotepadData.save();
     }
 
     // ---- Закрытие ----
 
     @Override
-    public void renderBackground(GuiGraphics g, int mx, int my, float dt) {
-        // Без блюра, игра видна через экран
-    }
+    public void renderBackground(GuiGraphics g, int mx, int my, float dt) {}
 
     @Override
     public void onClose() {
@@ -237,70 +269,76 @@ public class NotepadScreen extends Screen {
         super.onClose();
     }
 
-    // ---- Ввод с клавиатуры ----
+    // ---- Клавиатура ----
 
     @Override
     public boolean keyPressed(int key, int scan, int mods) {
-        if (key == 256) { onClose(); return true; } // Escape
+        if (key == 256) { onClose(); return true; }
 
-        if (renamingTitle) return handleRenameKey(key);
-        if (selected != null) return handleEditorKey(key, scan, mods);
-        return super.keyPressed(key, scan, mods);
-    }
+        // Пробел пишется в текст, а не нажимает focused кнопку
+        if (key == 32 && !renamingTitle && selected != null) {
+            typeChar(' ');
+            return true;
+        }
 
-    private boolean handleRenameKey(int key) {
-        switch (key) {
-            case 257, 335 -> { commitRename(); return true; }  // Enter
-            case 256       -> { cancelRename(); return true; } // Escape
-            case 259 -> {                                       // Backspace
-                if (titleCursor > 0) {
-                    titleBuffer = titleBuffer.substring(0, titleCursor - 1) + titleBuffer.substring(titleCursor);
-                    titleCursor--;
+        if (renamingTitle) {
+            switch (key) {
+                case 257, 335 -> { commitRename(); return true; }
+                case 259 -> {
+                    if (titleCursor > 0) {
+                        titleBuffer = titleBuffer.substring(0, titleCursor - 1) + titleBuffer.substring(titleCursor);
+                        titleCursor--;
+                    }
+                    return true;
                 }
-                return true;
+                case 263 -> { titleCursor = Math.max(0, titleCursor - 1); return true; }
+                case 262 -> { titleCursor = Math.min(titleBuffer.length(), titleCursor + 1); return true; }
             }
-            case 263 -> { titleCursor = Math.max(0, titleCursor - 1); return true; }
-            case 262 -> { titleCursor = Math.min(titleBuffer.length(), titleCursor + 1); return true; }
+            return true;
         }
-        return true;
-    }
 
-    private void commitRename() {
-        if (selected != null) {
-            selected.title = titleBuffer.isBlank() ? "Заметка" : titleBuffer.trim();
-        }
-        renamingTitle = false;
-        NotepadData.save();
-    }
+        if (selected == null) return super.keyPressed(key, scan, mods);
 
-    private void cancelRename() {
-        renamingTitle = false;
-    }
-
-    private boolean handleEditorKey(int key, int scan, int mods) {
         String t = selected.content;
+        boolean ctrl  = (mods & MOD_CTRL)  != 0;
+        boolean shift = (mods & MOD_SHIFT) != 0;
+
+        // Ctrl+Z — undo
+        if (ctrl && key == 90) { undo(); return true; }
+
         switch (key) {
             case 259 -> { // Backspace
-                if (cursor > 0) {
+                pushUndo();
+                if (ctrl) {
+                    // Ctrl+Backspace — стереть слово влево
+                    int newPos = wordBoundaryLeft(t, cursor);
+                    selected.content = t.substring(0, newPos) + t.substring(cursor);
+                    cursor = newPos;
+                } else if (cursor > 0) {
                     selected.content = t.substring(0, cursor - 1) + t.substring(cursor);
                     cursor--;
                 }
                 return true;
             }
             case 261 -> { // Delete
-                if (cursor < t.length()) {
+                pushUndo();
+                if (ctrl) {
+                    // Ctrl+Delete — стереть слово вправо
+                    int newEnd = wordBoundaryRight(t, cursor);
+                    selected.content = t.substring(0, cursor) + t.substring(newEnd);
+                } else if (cursor < t.length()) {
                     selected.content = t.substring(0, cursor) + t.substring(cursor + 1);
                 }
                 return true;
             }
-            case 263 -> { cursor = Math.max(0, cursor - 1); return true; }
-            case 262 -> { cursor = Math.min(t.length(), cursor + 1); return true; }
-            case 265 -> { moveCursorVertically(-1); return true; }
-            case 264 -> { moveCursorVertically(1); return true; }
-            case 268 -> { cursor = lineStart(t, cursor); return true; } // Home
-            case 269 -> { cursor = lineEnd(t, cursor); return true; }   // End
-            case 257, 335 -> { typeChar('\n'); return true; }            // Enter
-            case 258 -> { typeChar('\t'); return true; }                 // Tab
+            case 263 -> { cursor = ctrl ? wordBoundaryLeft(t, cursor) : Math.max(0, cursor - 1); updateCursorLine(); return true; }
+            case 262 -> { cursor = ctrl ? wordBoundaryRight(t, cursor) : Math.min(t.length(), cursor + 1); updateCursorLine(); return true; }
+            case 265 -> { moveCursorVertically(-1); updateCursorLine(); return true; }
+            case 264 -> { moveCursorVertically(1); updateCursorLine(); return true; }
+            case 268 -> { cursor = ctrl ? 0 : lineStart(t, cursor); updateCursorLine(); return true; }
+            case 269 -> { cursor = ctrl ? t.length() : lineEnd(t, cursor); updateCursorLine(); return true; }
+            case 257, 335 -> { typeChar('\n'); return true; }
+            case 258 -> { typeChar('\t'); return true; }
         }
         return super.keyPressed(key, scan, mods);
     }
@@ -323,8 +361,60 @@ public class NotepadScreen extends Screen {
 
     private void typeChar(char c) {
         if (selected.content.length() >= NotepadData.MAX_CONTENT_LENGTH) return;
+        pushUndo();
         selected.content = selected.content.substring(0, cursor) + c + selected.content.substring(cursor);
         cursor++;
+        updateCursorLine();
+    }
+
+    // Вычисляем на какой строке (по \n) находится курсор
+    private void updateCursorLine() {
+        if (selected == null) { cursorLineIndex = 0; return; }
+        String t = selected.content;
+        int line = 0;
+        for (int i = 0; i < cursor && i < t.length(); i++) {
+            if (t.charAt(i) == '\n') line++;
+        }
+        cursorLineIndex = line;
+    }
+
+    private void pushUndo() {
+        if (selected == null) return;
+        if (undoStack.size() >= MAX_UNDO) undoStack.pollFirst();
+        undoStack.addLast(selected.content + "\u0000" + cursor); // сохраняем контент + позицию курсора
+    }
+
+    private void undo() {
+        if (undoStack.isEmpty() || selected == null) return;
+        String snapshot = undoStack.pollLast();
+        int sep = snapshot.lastIndexOf('\u0000');
+        if (sep >= 0) {
+            selected.content = snapshot.substring(0, sep);
+            try { cursor = Math.min(Integer.parseInt(snapshot.substring(sep + 1)), selected.content.length()); }
+            catch (NumberFormatException ignored) { cursor = selected.content.length(); }
+        }
+    }
+
+    // Граница слова влево (Ctrl+Backspace / Ctrl+Left)
+    private int wordBoundaryLeft(String t, int pos) {
+        if (pos <= 0) return 0;
+        int p = pos - 1;
+        // Пропускаем пробелы/переносы
+        while (p > 0 && !Character.isLetterOrDigit(t.charAt(p))) p--;
+        // Пропускаем само слово
+        while (p > 0 && Character.isLetterOrDigit(t.charAt(p - 1))) p--;
+        return p;
+    }
+
+    // Граница слова вправо (Ctrl+Delete / Ctrl+Right)
+    private int wordBoundaryRight(String t, int pos) {
+        if (pos >= t.length()) return t.length();
+        int p = pos;
+        // Пропускаем текущее слово
+        while (p < t.length() && Character.isLetterOrDigit(t.charAt(p))) p++;
+        // Пропускаем пробелы
+        while (p < t.length() && !Character.isLetterOrDigit(t.charAt(p))) p++;
+        return p;
     }
 
     private int lineStart(String t, int pos) {
@@ -337,138 +427,202 @@ public class NotepadScreen extends Screen {
         return pos;
     }
 
-    private void moveCursorVertically(int direction) {
+    private void moveCursorVertically(int dir) {
         String t = selected.content;
         int col = cursor - lineStart(t, cursor);
         String[] lines = t.split("\n", -1);
-        int charCount = 0, lineIndex = 0;
+        int charCount = 0, lineIdx = 0;
         for (int i = 0; i < lines.length; i++) {
-            if (cursor <= charCount + lines[i].length()) { lineIndex = i; break; }
+            if (cursor <= charCount + lines[i].length()) { lineIdx = i; break; }
             charCount += lines[i].length() + 1;
         }
-        int target = Mth.clamp(lineIndex + direction, 0, lines.length - 1);
-        int targetCol = Math.min(col, lines[target].length());
+        int target = Mth.clamp(lineIdx + dir, 0, lines.length - 1);
         int newPos = 0;
         for (int i = 0; i < target; i++) newPos += lines[i].length() + 1;
-        cursor = newPos + targetCol;
+        cursor = newPos + Math.min(col, lines[target].length());
     }
 
-    // ---- Клики мышью ----
+    // ---- Клики ----
 
     @Override
     public boolean mouseClicked(double mx, double my, int btn) {
         int ix = (int) mx, iy = (int) my;
 
-        // Клик по заголовку заметки для переименования
-        if (selected != null && !renamingTitle) {
-            int titleX = ox + LIST_W + 4;
+        // Закрываем контекстное меню при любом клике
+        if (contextMenuNoteIdx >= 0) {
+            handleContextMenuClick(ix, iy);
+            contextMenuNoteIdx = -1;
+            return true;
+        }
+
+        // ПКМ по заметке в списке — открываем контекстное меню
+        if (btn == 1 && ix >= ox + 2 && ix < ox + LIST_W - 2) {
+            int visible = visibleListRows();
+            for (int i = 0; i < visible; i++) {
+                int idx = listOffset + i;
+                if (idx >= NotepadData.notes.size()) break;
+                int ry = oy + TORN + 16 + i * ROW_H;
+                if (iy >= ry && iy < ry + ROW_H) {
+                    contextMenuNoteIdx = idx;
+                    contextMenuX = ix;
+                    contextMenuY = iy;
+                    return true;
+                }
+            }
+        }
+
+        // ЛКМ по заметке в списке (строго левая панель)
+        if (btn == 0 && ix >= ox + 2 && ix < ox + LIST_W - 2) {
+            int visible = visibleListRows();
+            for (int i = 0; i < visible; i++) {
+                int idx = listOffset + i;
+                if (idx >= NotepadData.notes.size()) break;
+                int ry = oy + TORN + 16 + i * ROW_H;
+                if (iy >= ry && iy < ry + ROW_H) {
+                    openNote(NotepadData.notes.get(idx));
+                    return true;
+                }
+            }
+        }
+
+        // Клики в редакторе (строго правее LIST_W)
+        if (ix > ox + LIST_W && selected != null && !renamingTitle) {
+            // Заголовок — переименование
             int titleY = oy + TORN + 18;
-            if (ix >= titleX && ix < ox + W - 60 && iy >= titleY && iy < titleY + 11) {
+            if (iy >= titleY && iy < titleY + 11 && ix < ox + W - 60) {
                 renamingTitle = true;
                 titleBuffer = selected.title;
                 titleCursor = titleBuffer.length();
                 return true;
             }
-        }
 
-        // Клик по чекбоксам todo
-        if (selected != null && !renamingTitle && tryToggleTodo(ix, iy)) return true;
-
-        // Клик по заметке в списке
-        int visibleRows = visibleListRows();
-        for (int i = 0; i < visibleRows; i++) {
-            int noteIndex = listOffset + i;
-            if (noteIndex >= NotepadData.notes.size()) break;
-            int rowY = oy + TORN + 16 + i * ROW_H;
-            if (ix >= ox + 2 && ix < ox + LIST_W - 2 && iy >= rowY && iy < rowY + ROW_H) {
-                openNote(NotepadData.notes.get(noteIndex));
-                return true;
+            // Клик по строке текста (только в зоне контента)
+            int contentY = oy + TORN + 32;
+            int clipBot = oy + H - TORN - 20;
+            if (iy >= contentY && iy < clipBot) {
+                for (RenderedLine rl : renderedLines) {
+                    if (iy >= rl.screenY() && iy < rl.screenY() + lineH()) {
+                        // Чекбокс todo
+                        int checkX = ox + LIST_W + 22;
+                        if (ix >= checkX - 2 && ix < checkX + 9
+                                && (rl.type() == LineType.TODO_OPEN || rl.type() == LineType.TODO_DONE)) {
+                            toggleTodo(rl.charStart());
+                            return true;
+                        }
+                        // Позиция курсора
+                        cursor = clickPosToCursor(ix, iy, rl);
+                        updateCursorLine();
+                        return true;
+                    }
+                }
             }
         }
 
         return super.mouseClicked(mx, my, btn);
     }
 
-    private boolean tryToggleTodo(int mx, int my) {
-        int ex = ox + LIST_W + 22;
-        int ey = oy + TORN + 32;
-        int maxW = W - LIST_W - 30;
-        int clipBottom = oy + H - TORN - 20;
-
-        String text = selected.content;
-        String[] rawLines = text.split("\n", -1);
-        int dy = ey - textOffset * LINE_H;
-        int ci = 0;
-
-        for (String line : rawLines) {
-            List<String> wrapped = wrapToWidth(line, maxW);
-            if (wrapped.isEmpty()) wrapped.add("");
-
-            String first = wrapped.get(0);
-            if (dy >= ey - 2 && dy <= clipBottom && (first.startsWith("[ ] ") || first.startsWith("[x] "))) {
-                if (mx >= ex - 2 && mx < ex + 9 && my >= dy && my < dy + 10) {
-                    if (first.startsWith("[ ] ")) {
-                        selected.content = text.substring(0, ci) + "[x] " + text.substring(ci + 4);
-                    } else {
-                        selected.content = text.substring(0, ci) + "[ ] " + text.substring(ci + 4);
+    private void handleContextMenuClick(int ix, int iy) {
+        // Пункты меню: 0=открыть, 1=переименовать, 2=удалить
+        int menuX = contextMenuX, menuY = contextMenuY;
+        int itemH = 14, menuW = 90;
+        String[] items = { "Открыть", "Переименовать", "Удалить" };
+        for (int i = 0; i < items.length; i++) {
+            int itemY = menuY + i * itemH;
+            if (ix >= menuX && ix < menuX + menuW && iy >= itemY && iy < itemY + itemH) {
+                if (contextMenuNoteIdx < NotepadData.notes.size()) {
+                    Note note = NotepadData.notes.get(contextMenuNoteIdx);
+                    switch (i) {
+                        case 0 -> openNote(note);
+                        case 1 -> {
+                            openNote(note);
+                            renamingTitle = true;
+                            titleBuffer = note.title;
+                            titleCursor = titleBuffer.length();
+                        }
+                        case 2 -> NotepadData.deleteNote(note.id);
                     }
-                    NotepadData.save();
-                    return true;
                 }
+                break;
             }
-
-            for (int wi = 0; wi < wrapped.size(); wi++) {
-                ci += wrapped.get(wi).length();
-                if (wi < wrapped.size() - 1) dy += LINE_H;
-            }
-            ci++;
-            dy += LINE_H;
         }
-        return false;
+    }
+
+    // Определяем позицию символа по клику мышью внутри строки
+    private int clickPosToCursor(int mx, int screenY, RenderedLine rl) {
+        int textX = ox + LIST_W + 22;
+        // Для todo смещаем начало текста
+        String raw = rl.raw();
+        String display = getDisplayText(raw, rl.type());
+        int xOffset = getTextXOffset(rl.type());
+
+        int relX = mx - (textX + xOffset);
+        if (relX <= 0) return rl.charStart() + prefixLen(rl.type());
+
+        // Идём по символам и ищем ближайший
+        for (int i = 0; i <= display.length(); i++) {
+            int w = font.width(display.substring(0, i));
+            if (w >= relX) {
+                // Уточняем — лево или право от символа ближе
+                int wPrev = i > 0 ? font.width(display.substring(0, i - 1)) : 0;
+                int chosen = (relX - wPrev < w - relX) ? i - 1 : i;
+                return rl.charStart() + prefixLen(rl.type()) + Math.max(0, chosen);
+            }
+        }
+        return rl.charEnd();
+    }
+
+    private void toggleTodo(int lineCharStart) {
+        String t = selected.content;
+        if (lineCharStart + 4 > t.length()) return;
+        String prefix = t.substring(lineCharStart, lineCharStart + 4);
+        if (prefix.equals("[ ] ")) {
+            selected.content = t.substring(0, lineCharStart) + "[x] " + t.substring(lineCharStart + 4);
+        } else if (prefix.equals("[x] ")) {
+            selected.content = t.substring(0, lineCharStart) + "[ ] " + t.substring(lineCharStart + 4);
+        }
+        NotepadData.save();
     }
 
     @Override
     public boolean mouseScrolled(double mx, double my, double dx, double dy) {
-        int ix = (int) mx;
-        if (ix < ox + LIST_W) {
-            int maxScroll = Math.max(0, NotepadData.notes.size() - visibleListRows());
-            listOffset = Mth.clamp((int) (listOffset - dy), 0, maxScroll);
+        boolean ctrl = hasControlDown();
+        if (ctrl) {
+            // Ctrl+Scroll — масштаб шрифта
+            fontScale = Mth.clamp(fontScale + (float) dy * 0.1f, 0.5f, 2.0f);
+            return true;
+        }
+        if ((int) mx < ox + LIST_W) {
+            listOffset = Mth.clamp((int) (listOffset - dy), 0,
+                Math.max(0, NotepadData.notes.size() - visibleListRows()));
         } else {
-            int maxScroll = Math.max(0, countTextLines() - visibleEditorLines());
-            textOffset = Mth.clamp((int) (textOffset - dy), 0, maxScroll);
+            textOffset = Mth.clamp((int) (textOffset - dy), 0,
+                Math.max(0, countTextLines() - visibleEditorLines()));
         }
         return true;
     }
 
-    private int visibleListRows() {
-        return (H - TORN * 2 - 22) / ROW_H;
-    }
-
-    private int visibleEditorLines() {
-        return (H - TORN * 2 - 34) / LINE_H;
-    }
+    private int visibleListRows() { return (H - TORN * 2 - 22) / ROW_H; }
+    private int visibleEditorLines() { return (H - TORN * 2 - 36) / lineH(); }
 
     private int countTextLines() {
         if (selected == null) return 0;
-        int maxW = W - LIST_W - 30;
-        int total = 0;
-        for (String line : selected.content.split("\n", -1)) {
-            total += Math.max(1, wrapToWidth(line, maxW).size());
-        }
-        return total;
+        int maxW = editorMaxW();
+        int count = 0;
+        for (String line : selected.content.split("\n", -1))
+            count += Math.max(1, wrapLine(line, maxW).size());
+        return count;
     }
 
-    // ---- Тик ----
+    private int editorMaxW() { return W - LIST_W - 32; }
+
+    // ---- Tick ----
 
     @Override
     public void tick() {
-        if (++cursorTimer >= 10) {
-            cursorTimer = 0;
-            cursorVisible = !cursorVisible;
-        }
+        if (++cursorTimer >= 10) { cursorTimer = 0; cursorVisible = !cursorVisible; }
     }
 
-    // ---- Рендер ----
+    // ---- Render ----
 
     @Override
     public void render(GuiGraphics g, int mx, int my, float dt) {
@@ -477,24 +631,21 @@ public class NotepadScreen extends Screen {
         drawEditor(g);
         super.render(g, mx, my, dt);
         drawColorPickerOverlay(g);
+        drawContextMenu(g);
     }
 
     private void drawFrame(GuiGraphics g) {
         int x = ox, y = oy;
-
         g.fill(x + 4, y + 4, x + W + 4, y + H + 4, COL_SHADOW);
         g.fill(x, y, x + W, y + H, COL_BG);
         g.fill(x, y, x + LIST_W, y + H, COL_LIST);
         g.fill(x + LIST_W, y, x + LIST_W + 1, y + H, COL_BORDER);
 
-        // Рваный верх
         for (int col = 0; col < W; col += 4) {
             int t = tornTop[Math.min(col / 4, tornTop.length - 1)];
             g.fill(x + col, y, x + col + 4, y + t, 0xFF1E1E1E);
             g.fill(x + col, y + t, x + col + 4, y + t + 2, COL_TORN);
         }
-
-        // Рваный низ
         for (int col = 0; col < W; col += 4) {
             int t = tornBot[Math.min(col / 4, tornBot.length - 1)];
             int base = y + H - TORN;
@@ -502,11 +653,9 @@ public class NotepadScreen extends Screen {
             g.fill(x + col, base + t - 1, x + col + 4, base + t + 1, COL_TORN);
         }
 
-        // Тулбар редактора
         g.fill(x + LIST_W + 1, y + TORN, x + W, y + TORN + 17, COL_TOOLBAR);
         g.fill(x + LIST_W + 1, y + TORN + 16, x + W, y + TORN + 17, COL_BORDER);
 
-        // Дырки переплёта
         for (int i = 0; i < 3; i++) {
             int hy = y + 30 + i * 75;
             g.fill(x + LIST_W + 3, hy, x + LIST_W + 12, hy + 8, 0xFF111111);
@@ -514,52 +663,43 @@ public class NotepadScreen extends Screen {
             g.fill(x + LIST_W + 4, hy + 1, x + LIST_W + 7, hy + 3, 0x22FFFFFF);
         }
 
-        // Красная линия поля
-        int lineX = ox + LIST_W + 21;
-        g.fill(lineX, oy + TORN + 17, lineX + 1, oy + H - TORN - 20, COL_MARGIN_RED);
+        int mx2 = ox + LIST_W + 22;
+        g.fill(mx2, oy + TORN + 17, mx2 + 1, oy + H - TORN - 20, COL_RED_MARGIN);
 
-        // Горизонтальные линейки
-        int ruledY = oy + TORN + 32 + LINE_H;
+        int ruledY = oy + TORN + 34 + lineH();
         while (ruledY < oy + H - TORN - 20) {
-            g.fill(lineX - 1, ruledY, ox + W - 8, ruledY + 1, COL_RULED_LINE);
-            ruledY += LINE_H;
+            g.fill(mx2 - 1, ruledY, ox + W - 8, ruledY + 1, COL_RULE);
+            ruledY += lineH();
         }
     }
 
     private void drawList(GuiGraphics g, int mx, int my) {
         g.drawString(font, "Заметки", ox + 4, oy + TORN + 4, COL_HINT, false);
 
-        int clipX1 = ox + 1, clipX2 = ox + LIST_W - 1;
         int clipY1 = oy + TORN + 14, clipY2 = oy + H - TORN - 20;
-        g.enableScissor(clipX1, clipY1, clipX2, clipY2);
+        g.enableScissor(ox + 1, clipY1, ox + LIST_W - 1, clipY2);
 
-        int visibleRows = visibleListRows();
-        for (int i = 0; i < visibleRows + 1; i++) {
-            int noteIndex = listOffset + i;
-            if (noteIndex >= NotepadData.notes.size()) break;
-
-            Note note = NotepadData.notes.get(noteIndex);
-            int rowY = oy + TORN + 16 + i * ROW_H;
-
-            boolean hovered = mx >= ox + 2 && mx < ox + LIST_W - 2 && my >= rowY && my < rowY + ROW_H;
-            boolean isSelected = note == selected;
-
-            if (isSelected) g.fill(ox + 2, rowY, ox + LIST_W - 2, rowY + ROW_H - 2, COL_SEL);
-            else if (hovered) g.fill(ox + 2, rowY, ox + LIST_W - 2, rowY + ROW_H - 2, COL_HOVER);
-
+        int visible = visibleListRows();
+        for (int i = 0; i < visible + 1; i++) {
+            int idx = listOffset + i;
+            if (idx >= NotepadData.notes.size()) break;
+            Note note = NotepadData.notes.get(idx);
+            int ry = oy + TORN + 16 + i * ROW_H;
+            boolean hov = mx >= ox + 2 && mx < ox + LIST_W - 2 && my >= ry && my < ry + ROW_H;
+            boolean isSel = note == selected;
+            if (isSel) g.fill(ox + 2, ry, ox + LIST_W - 2, ry + ROW_H - 2, COL_SEL);
+            else if (hov) g.fill(ox + 2, ry, ox + LIST_W - 2, ry + ROW_H - 2, COL_HOVER);
             boolean pinned = NotepadData.stickers.stream().anyMatch(s -> s.noteId.equals(note.id));
-            int maxTitleWidth = LIST_W - (pinned ? 22 : 8);
-            String title = font.plainSubstrByWidth(note.title, maxTitleWidth);
-            g.drawString(font, title, ox + 5, rowY + 6, isSelected ? COL_TEXT : COL_HINT, false);
-
-            if (pinned) g.drawString(font, "*", ox + LIST_W - 10, rowY + 6, 0xFFFF8800, false);
+            int maxTW = LIST_W - (pinned ? 22 : 8);
+            g.drawString(font, font.plainSubstrByWidth(note.title, maxTW), ox + 5, ry + 6,
+                isSel ? COL_TEXT : COL_HINT, false);
+            if (pinned) g.drawString(font, "*", ox + LIST_W - 10, ry + 6, 0xFFFF8800, false);
         }
 
         g.disableScissor();
 
         // Скроллбар списка
         int total = NotepadData.notes.size();
-        int visible = visibleListRows();
         if (total > visible) {
             float scroll = (float) listOffset / (total - visible);
             int barH = clipY2 - clipY1;
@@ -574,16 +714,14 @@ public class NotepadScreen extends Screen {
         int ex = ox + LIST_W + 22;
         int titleY = oy + TORN + 18;
         int contentY = titleY + 14;
-        int maxW = W - LIST_W - 30;
-        int clipTop = contentY - 2;
-        int clipBot = oy + H - TORN - 20;
+        int clipTop = contentY - 2, clipBot = oy + H - TORN - 20;
 
         if (selected == null) {
             g.drawString(font, "Выберите заметку слева", ex, contentY + 20, COL_HINT, false);
             return;
         }
 
-        // Заголовок / поле переименования
+        // Заголовок
         if (renamingTitle) {
             g.fill(ex - 2, titleY - 1, ox + W - 22, titleY + 11, 0x33FFFFFF);
             g.drawString(font, titleBuffer, ex, titleY + 1, COL_TEXT, false);
@@ -591,134 +729,257 @@ public class NotepadScreen extends Screen {
                 int cx = ex + font.width(titleBuffer.substring(0, titleCursor));
                 g.fill(cx, titleY - 1, cx + 1, titleY + 10, COL_TEXT);
             }
-            g.drawString(font, "Enter - сохранить", ox + LIST_W + 200, titleY + 1, COL_HINT, false);
+            g.drawString(font, "Enter — сохранить", ox + LIST_W + 210, titleY + 1, COL_HINT, false);
         } else {
             String title = font.plainSubstrByWidth(selected.title, W - LIST_W - 70);
             g.drawString(font, title, ex, titleY + 1, COL_TEXT, false);
-            g.drawString(font, "  [клик чтобы переименовать]", ex + font.width(title), titleY + 1, COL_HINT, false);
+            g.drawString(font, " [клик для переименования]", ex + font.width(title), titleY + 1, COL_HINT, false);
         }
 
-        // Контент
+        // Контент с масштабированием шрифта
         g.enableScissor(ox + LIST_W + 2, clipTop, ox + W - 2, clipBot);
+        if (fontScale != 1.0f) {
+            g.pose().pushPose();
+            // Масштабируем относительно левого верхнего угла области текста
+            g.pose().translate(ex, contentY, 0);
+            g.pose().scale(fontScale, fontScale, 1.0f);
+            g.pose().translate(-ex, -contentY, 0);
+        }
+
+        renderedLines.clear();
+        if (selected.content.isEmpty()) {
+            g.drawString(font, "Начните писать... (поддерживается MD)", ex, contentY, COL_HINT, false);
+        }
 
         String text = selected.content;
-        if (text.isEmpty()) {
-            g.drawString(font, "Начните писать...", ex, contentY, COL_HINT, false);
-        }
-
         String[] rawLines = text.split("\n", -1);
-        int dy = contentY - textOffset * LINE_H;
-        int ci = 0;
+        int dy = contentY - textOffset * lineH();
+        int ci = 0; // позиция в оригинальной строке
 
         outer:
         for (int li = 0; li < rawLines.length; li++) {
-            List<String> wrapped = wrapToWidth(rawLines[li], maxW);
+            String raw = rawLines[li];
+            LineType type = detectLineType(raw);
+            String display = getDisplayText(raw, type);
+            int xOff = getTextXOffset(type);
+            int maxW = editorMaxW() - xOff;
+
+            List<String> wrapped = wrapLine(display, maxW);
             if (wrapped.isEmpty()) wrapped.add("");
 
             for (int wi = 0; wi < wrapped.size(); wi++) {
                 String seg = wrapped.get(wi);
-                int segEnd = ci + seg.length();
+                int segStart = ci + (wi == 0 ? prefixLen(type) : 0);
+                // Для переноса — оригинальная позиция в тексте чуть сложнее,
+                // упрощённо: курсор считаем по первому сегменту каждой строки
+                int segCharStart = ci;
+                int segCharEnd = ci + raw.length();
 
-                if (dy >= clipTop - LINE_H && dy <= clipBot) {
-                    drawTextSegment(g, seg, ex, dy, maxW, wi == 0);
+                if (dy >= clipTop - lineH() && dy <= clipBot) {
+                    renderedLines.add(new RenderedLine(segCharStart, segCharEnd, dy, type, raw));
+                    // Если курсор на этой строке — показываем сырой текст (Obsidian-режим)
+                    boolean cursorOnThisLine = (li == cursorLineIndex) && !renamingTitle;
+                    if (cursorOnThisLine) {
+                        // Рисуем подсветку строки
+                        g.fill(ex - 4, dy - 1, ex + editorMaxW(), dy + lineH(), 0x18000000);
+                        g.drawString(font, raw, ex, dy, COL_HINT, false);
+                    } else {
+                        drawLine(g, seg, ex + xOff, dy, type, ci, segCharStart + prefixLen(type));
+                    }
                 }
 
-                if (!renamingTitle && cursorVisible && cursor >= ci && cursor <= segEnd) {
-                    String beforeCursor = seg.substring(0, cursor - ci);
-                    int cx = ex + font.width(beforeCursor);
-                    if (dy >= clipTop && dy <= clipBot) {
+                // Курсор
+                if (!renamingTitle && cursorVisible && cursor >= ci && cursor <= ci + raw.length()) {
+                    // Найти где именно в пикселях курсор
+                    int posInDisplay = Math.max(0, cursor - ci - prefixLen(type));
+                    if (posInDisplay >= 0 && posInDisplay <= display.length() && dy >= clipTop && dy <= clipBot) {
+                        String beforeCursor = font.plainSubstrByWidth(display.substring(0, posInDisplay), maxW);
+                        int cx = ex + xOff + font.width(beforeCursor);
                         g.fill(cx, dy - 1, cx + 1, dy + font.lineHeight, COL_TEXT);
                     }
                 }
 
-                ci = segEnd;
                 if (wi < wrapped.size() - 1) {
-                    dy += LINE_H;
-                    if (dy > clipBot + LINE_H) break outer;
+                    dy += lineH();
+                    if (dy > clipBot + lineH()) break outer;
                 }
             }
             if (li < rawLines.length - 1) ci++;
-            dy += LINE_H;
-            if (dy > clipBot + LINE_H) break;
+            ci += raw.length();
+            dy += lineH();
+            if (dy > clipBot + lineH()) break;
         }
 
         // Скроллбар контента
-        int totalLines = countTextLines();
-        int visLines = visibleEditorLines();
-        if (totalLines > visLines) {
-            float scroll = (float) textOffset / (totalLines - visLines);
+        int total = countTextLines(), vis = visibleEditorLines();
+        if (total > vis) {
+            float scroll = (float) textOffset / (total - vis);
             int barH = clipBot - clipTop;
-            int thumbH = Math.max(10, barH * visLines / totalLines);
+            int thumbH = Math.max(10, barH * vis / total);
             int thumbY = clipTop + (int) ((barH - thumbH) * scroll);
             g.fill(ox + W - 7, clipTop, ox + W - 5, clipBot, 0x33000000);
             g.fill(ox + W - 7, thumbY, ox + W - 5, thumbY + thumbH, 0x88000000);
         }
 
+        if (fontScale != 1.0f) {
+            g.pose().popPose();
+        }
         g.disableScissor();
     }
 
-    private void drawTextSegment(GuiGraphics g, String seg, int ex, int dy, int maxW, boolean lineStart) {
-        // Разделитель
-        if (lineStart && seg.startsWith("----")) {
-            g.fill(ex - 2, dy + 4, ex + maxW, dy + 5, 0x88886644);
-            return;
+    // Рендер одной строки в зависимости от её типа (MD)
+    private void drawLine(GuiGraphics g, String seg, int x, int y, LineType type, int ci, int displayStart) {
+        switch (type) {
+            case H1 -> {
+                // H1 — крупнее не можем, рисуем жирным цветом + подчёркивание
+                g.drawString(font, seg, x, y, COL_H1, false);
+                g.fill(x, y + font.lineHeight, x + font.width(seg), y + font.lineHeight + 1, COL_H1);
+            }
+            case H2 -> g.drawString(font, seg, x, y, COL_H2, false);
+            case H3 -> g.drawString(font, seg, x, y, COL_HINT, false);
+            case TODO_OPEN -> {
+                drawCheckbox(g, x - 11, y, false);
+                g.drawString(font, seg, x, y, COL_TEXT, false);
+            }
+            case TODO_DONE -> {
+                drawCheckbox(g, x - 11, y, true);
+                g.drawString(font, seg, x, y, 0xFF888877, false);
+                g.fill(x, y + 4, x + font.width(seg), y + 5, 0xFF888877);
+            }
+            case HR -> {
+                int mid = y + lineH() / 2;
+                g.fill(x - 10, mid, x + editorMaxW(), mid + 1, 0xAA8B7355);
+            }
+            case QUOTE -> {
+                g.fill(x - 8, y, x - 6, y + lineH() - 1, 0xFF8B7355);
+                g.drawString(font, seg, x, y, COL_QUOTE, false);
+            }
+            case CODE -> {
+                g.fill(x - 2, y - 1, x + font.width(seg) + 2, y + lineH(), COL_CODE_BG);
+                g.drawString(font, seg, x, y, 0xFF4A7A30, false);
+            }
+            default -> g.drawString(font, seg, x, y, COL_TEXT, false);
         }
-
-        // Todo: не отмечено
-        if (lineStart && seg.startsWith("[ ] ")) {
-            drawCheckbox(g, ex, dy, false);
-            g.drawString(font, seg.substring(4), ex + 11, dy, COL_TEXT, false);
-            return;
-        }
-
-        // Todo: отмечено
-        if (lineStart && seg.startsWith("[x] ")) {
-            drawCheckbox(g, ex, dy, true);
-            String rest = seg.substring(4);
-            g.drawString(font, rest, ex + 11, dy, 0xFF888877, false);
-            // Зачёркивание
-            g.fill(ex + 11, dy + 4, ex + 11 + font.width(rest), dy + 5, 0xFF888877);
-            return;
-        }
-
-        g.drawString(font, seg, ex, dy, COL_TEXT, false);
     }
 
-    private void drawCheckbox(GuiGraphics g, int ex, int dy, boolean checked) {
-        g.fill(ex - 1, dy, ex + 8, dy + 8, 0x33000000);
+    private void drawCheckbox(GuiGraphics g, int x, int y, boolean checked) {
+        g.fill(x, y, x + 8, y + 8, 0x33000000);
         if (checked) {
-            g.fill(ex, dy + 1, ex + 7, dy + 7, COL_CHECKED);
-            g.drawString(font, "v", ex, dy, 0xFFFFFFFF, false);
+            g.fill(x + 1, y + 1, x + 7, y + 7, COL_CHECKED);
+            g.drawString(font, "v", x, y, 0xFFFFFFFF, false);
         } else {
-            g.fill(ex, dy + 1, ex + 7, dy + 7, 0xFFEEE0C4);
+            g.fill(x + 1, y + 1, x + 7, y + 7, 0xFFEEE0C4);
+        }
+    }
+
+    private void drawContextMenu(GuiGraphics g) {
+        if (contextMenuNoteIdx < 0) return;
+        int menuX = contextMenuX, menuY = contextMenuY;
+        int itemH = 14, menuW = 90;
+        String[] items = { "Открыть", "Переименовать", "Удалить" };
+        // Фон меню
+        g.fill(menuX - 1, menuY - 1, menuX + menuW + 1, menuY + items.length * itemH + 1, COL_BORDER);
+        g.fill(menuX, menuY, menuX + menuW, menuY + items.length * itemH, COL_LIST);
+        for (int i = 0; i < items.length; i++) {
+            int iy = menuY + i * itemH;
+            if (i == items.length - 1) {
+                // Удалить — красноватый
+                g.fill(menuX, iy, menuX + menuW, iy + itemH, 0xFFEED8D8);
+                g.drawString(font, items[i], menuX + 4, iy + 3, 0xFFAA4444, false);
+            } else {
+                g.drawString(font, items[i], menuX + 4, iy + 3, COL_TEXT, false);
+            }
+            if (i < items.length - 1)
+                g.fill(menuX, iy + itemH - 1, menuX + menuW, iy + itemH, 0x33000000);
         }
     }
 
     private void drawColorPickerOverlay(GuiGraphics g) {
-        if (!pickingColor) return;
-        int y = oy + 17;
-        g.drawString(font, "Цвет:", ox + W - 18 - STICKER_COLORS.length * 17 - 36, y + 1, COL_HINT, false);
+        if (!pickingColor || colorBtns.isEmpty()) return;
+
+        Button first = colorBtns.get(0);
+
+        int baseX = first.getX();
+        int baseY = first.getY();
+
+        int width = STICKER_COLORS.length * 17;
+        int height = 12;
+
+        // Фон (смещаем ВЛЕВО)
+        g.fill(baseX - width + 15, baseY - 2, baseX + 15, baseY + height, 0xDD333333);
+
+        // Цвета рисуем ВЛЕВО
         for (int i = 0; i < STICKER_COLORS.length; i++) {
-            int bx = ox + W - 18 - (STICKER_COLORS.length - i) * 17 + 1;
-            g.fill(bx, y, bx + 13, y + 10, STICKER_COLORS[i]);
+            int x = baseX - i * 17;
+            g.fill(x, baseY, x + 13, baseY + 11, STICKER_COLORS[i]);
         }
+    }
+
+    // ---- MD парсинг ----
+
+    private LineType detectLineType(String line) {
+        if (line.startsWith("### ")) return LineType.H3;
+        if (line.startsWith("## ")) return LineType.H2;
+        if (line.startsWith("# ")) return LineType.H1;
+        if (line.startsWith("[ ] ")) return LineType.TODO_OPEN;
+        if (line.startsWith("[x] ")) return LineType.TODO_DONE;
+        if (line.equals("---") || line.equals("***")) return LineType.HR;
+        if (line.startsWith("> ")) return LineType.QUOTE;
+        if (line.startsWith("`") && line.endsWith("`") && line.length() > 1) return LineType.CODE;
+        return LineType.NORMAL;
+    }
+
+    // Текст без MD-префикса для отображения
+    private String getDisplayText(String line, LineType type) {
+        return switch (type) {
+            case H1 -> line.substring(2);
+            case H2 -> line.substring(3);
+            case H3 -> line.substring(4);
+            case TODO_OPEN, TODO_DONE -> line.substring(4);
+            case QUOTE -> line.substring(2);
+            case CODE -> line.substring(1, line.length() - 1);
+            case HR -> "";
+            default -> line;
+        };
+    }
+
+    // Длина MD-префикса в исходной строке
+    private int prefixLen(LineType type) {
+        return switch (type) {
+            case H1 -> 2;
+            case H2 -> 3;
+            case H3 -> 4;
+            case TODO_OPEN, TODO_DONE -> 4;
+            case QUOTE -> 2;
+            case CODE -> 1;
+            default -> 0;
+        };
+    }
+
+    // Дополнительный отступ X для типа строки
+    private int getTextXOffset(LineType type) {
+        return switch (type) {
+            case TODO_OPEN, TODO_DONE -> 11;
+            case QUOTE -> 8;
+            case CODE -> 4;
+            default -> 0;
+        };
     }
 
     // ---- Утилиты ----
 
-    private List<String> wrapToWidth(String line, int maxW) {
+    private List<String> wrapLine(String line, int maxW) {
         List<String> result = new ArrayList<>();
         if (line.isEmpty()) { result.add(""); return result; }
-        String remaining = line;
-        while (!remaining.isEmpty()) {
-            String fit = font.plainSubstrByWidth(remaining, maxW);
-            if (fit.isEmpty()) fit = remaining.substring(0, 1);
+        String rem = line;
+        while (!rem.isEmpty()) {
+            String fit = font.plainSubstrByWidth(rem, maxW);
+            if (fit.isEmpty()) fit = rem.substring(0, 1);
             result.add(fit);
-            remaining = remaining.substring(fit.length());
+            rem = rem.substring(fit.length());
         }
         return result;
     }
 
-    @Override
-    public boolean isPauseScreen() { return false; }
+    @Override public boolean isPauseScreen() { return false; }
 }
