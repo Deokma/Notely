@@ -1,13 +1,24 @@
 {
-  "notely.button.new_note": "New Note",
-  "notely.message.select_note": "Select a note on the left",
-  "notely.hint.start_writing": "Start writing... (Markdown supported)",
-  "notely.menu.open": "Open",
-  "notely.menu.rename": "Rename",
-  "notely.menu.delete": "Delete",
-  "gui.notepad.title": "Notepad",
-  "gui.notepad.placeholder": "Start writing...",
-  "gui.notepad.save": "Save",
   "key.notepad.open": "Open Notepad",
-  "key.categories.notepad": "Notepad"
+  "key.categories.notepad": "Notepad",
+
+  "notely.button.new_note": "New Note",
+  "notely.button.pin": "\uD83D\uDCCC",
+  "notely.button.help": "?",
+  "notely.button.close": "X",
+
+  "notely.list.header": "Notes",
+  "notely.list.pinned_marker": "*",
+
+  "notely.editor.select_note": "Select a note on the left",
+  "notely.editor.start_writing": "Start writing...",
+  "notely.editor.rename_hint": "Enter \u2014 save",
+  "notely.editor.click_to_rename": " [click to rename]",
+
+  "notely.context.open": "Open",
+  "notely.context.rename": "Rename",
+  "notely.context.delete": "Delete",
+
+  "notely.help.title": "Syntax Help",
+  "notely.help.content": "# Heading H1\n## Heading H2\n### Heading H3\n---\n> Quote\n`Code in text`\n---\n[ ] Task not completed\n[x] Task completed\n---\nPlain text. Push \uD83D\uDCCC for pin.\nRMB on a note in menu.\nCtrl+Backspace \u2014 clean word."
 }

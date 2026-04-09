@@ -1,7 +1,24 @@
 {
-  "gui.notepad.title": "Блокнот",
-  "gui.notepad.placeholder": "Начните писать...",
-  "gui.notepad.save": "Сохранить",
   "key.notepad.open": "Открыть блокнот",
-  "key.categories.notepad": "Блокнот"
+  "key.categories.notepad": "Блокнот",
+
+  "notely.button.new_note": "Новая заметка",
+  "notely.button.pin": "\uD83D\uDCCC",
+  "notely.button.help": "?",
+  "notely.button.close": "X",
+
+  "notely.list.header": "Заметки",
+  "notely.list.pinned_marker": "*",
+
+  "notely.editor.select_note": "Выберите заметку слева",
+  "notely.editor.start_writing": "Начните писать...",
+  "notely.editor.rename_hint": "Enter \u2014 сохранить",
+  "notely.editor.click_to_rename": " [нажмите для переименования]",
+
+  "notely.context.open": "Открыть",
+  "notely.context.rename": "Переименовать",
+  "notely.context.delete": "Удалить",
+
+  "notely.help.title": "Справка по синтаксису",
+  "notely.help.content": "# Заголовок H1\n## Заголовок H2\n### Заголовок H3\n---\n> Цитата\n`Код в тексте`\n---\n[ ] Задача не выполнена\n[x] Задача выполнена\n---\nОбычный текст. Нажмите \uD83D\uDCCC для закрепления.\nПКМ по заметке в меню.\nCtrl+Backspace \u2014 удалить слово."
 }

@@ -6,6 +6,6 @@ import net.fabricmc.api.ModInitializer;
 public class NotepadModFabric implements ModInitializer {
     @Override
     public void onInitialize() {
-        NotepadMod.LOGGER.info("Notepad Fabric init");
+        NotepadMod.LOG.info("Notepad Fabric init");
     }
 }
