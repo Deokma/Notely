@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
-  "id": "notepad",
-  "version": "1.0.0",
-  "name": "Notely",
-  "description": "A client-side notepad mod with Markdown rendering and pinnable sticky notes. Write notes, create todos, and pin them to your HUD without leaving the game.",
-  "authors": ["Deokma"],
-  "license": "MPL-2.0",
-  "icon": "assets/notepad/textures/icon.png",
+  "id": "notely",
+  "version": "${version}",
+  "name": "${mod_name}",
+  "description": "${description}",
+  "authors": ["${mod_author}"],
+  "license": "${license}",
+  "icon": "assets/notely/textures/icon.png",
   "environment": "client",
   "entrypoints": {
     "main": [
-      "by.deokma.notely.fabric.NotepadModFabric"
+      "by.deokma.notely.fabric.NotelyModFabric"
     ],
     "client": [
-      "by.deokma.notely.fabric.NotepadModFabricClient"
+      "by.deokma.notely.fabric.NotelyModFabricClient"
     ],
     "modmenu": [
       "by.deokma.notely.fabric.NotepadModMenuEntrypoint"
@@ -21,8 +21,8 @@
   },
   "mixins": [],
   "depends": {
-    "fabricloader": ">=0.16.9",
-    "minecraft": "~1.21.1",
+    "fabricloader": ">=${fabric_loader_version}",
+    "minecraft": "~${minecraft_version}",
     "java": ">=21",
     "fabric-api": "*"
   },

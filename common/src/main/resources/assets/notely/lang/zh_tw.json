@@ -1,6 +1,6 @@
 {
-  "key.notepad.open": "開啟記事本",
-  "key.categories.notepad": "記事本",
+  "key.notely.open": "開啟記事本",
+  "key.categories.notely": "記事本",
 
   "notely.button.new_note": "新增筆記",
   "notely.button.pin": "\uD83D\uDCCC",

@@ -1,7 +1,7 @@
 package by.deokma.notely.gui;
 
-import by.deokma.notely.NotepadData;
-import by.deokma.notely.NotepadData.Note;
+import by.deokma.notely.NotelyData;
+import by.deokma.notely.NotelyData.Note;
 import by.deokma.notely.util.MarkdownRenderer;
 import by.deokma.notely.util.MarkdownRenderer.LineType;
 import by.deokma.notely.util.TextCursor;
@@ -13,39 +13,32 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.ArrayList;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.List;
 
-public class NotepadScreen extends Screen {
+public class NotelyScreen extends Screen {
 
     // ---- Layout constants ----
-    private static final int W      = 440;
-    private static final int H      = 280;
+    private static final int W = 440;
+    private static final int H = 280;
     private static final int LIST_W = 130;
-    private static final int TORN   = 6;
-    private static final int ROW_H  = 22;
+    private static final int TORN = 6;
+    private static final int ROW_H = 22;
     private static final int LINE_H = 12;
 
     // ---- Color palette ----
-    private static final int COL_BG         = 0xFFEEE0C4;
-    private static final int COL_LIST       = 0xFFD8C9A8;
-    private static final int COL_SEL        = 0xFFC4B08A;
-    private static final int COL_HOVER      = 0xFFCFBF9A;
-    private static final int COL_BORDER     = 0xFF8B7355;
-    private static final int COL_TORN       = 0xFFB8A888;
-    private static final int COL_RULE       = 0x22886644;
-    private static final int COL_RED_MARGIN = 0x88CC4433;
-    private static final int COL_SHADOW     = 0x55000000;
-    private static final int COL_TOOLBAR    = 0xFFCFBF9A;
+    private static final int COL_LIST = 0xFFD8C9A8;
+    private static final int COL_SEL = 0xFFC4B08A;
+    private static final int COL_HOVER = 0xFFCFBF9A;
+    private static final int COL_BORDER = 0xFF8B7355;
+    private static final int COL_RULE = 0x22886644;
+    private static final int COL_TOOLBAR = 0xFFCFBF9A;
 
     static final int[] STICKER_COLORS = {
-        0xFFFFF176, 0xFFFFCC80, 0xFFA5D6A7,
-        0xFF90CAF9, 0xFFCE93D8, 0xFFEF9A9A
+            0xFFFFF176, 0xFFFFCC80, 0xFFA5D6A7,
+            0xFF90CAF9, 0xFFCE93D8, 0xFFEF9A9A
     };
-
-    private static final ResourceLocation TEXTURE =
-            ResourceLocation.fromNamespaceAndPath("notely", "textures/gui/notepad.png");
 
     // ---- Torn-paper edge ----
     private final int[] tornTop, tornBot;
@@ -70,7 +63,7 @@ public class NotepadScreen extends Screen {
 
     // ---- Mouse drag selection ----
     private boolean draggingContent = false;
-    private boolean draggingTitle   = false;
+    private boolean draggingTitle = false;
 
     // ---- Color picker ----
     private boolean pickingColor = false;
@@ -87,7 +80,9 @@ public class NotepadScreen extends Screen {
     private final ArrayDeque<String> titleUndoStack = new ArrayDeque<>();
 
     // ---- Rendered lines cache (rebuilt each frame) ----
-    private record RenderedLine(int charStart, int charEnd, int screenY, LineType type, String raw) {}
+    private record RenderedLine(int charStart, int charEnd, int screenY, LineType type, String raw) {
+    }
+
     private final List<RenderedLine> renderedLines = new ArrayList<>();
 
     // ---- Widgets ----
@@ -95,18 +90,16 @@ public class NotepadScreen extends Screen {
     private final List<Button> colorBtns = new ArrayList<>();
 
     // ---- Textures ----
-    private static final ResourceLocation TEX_NOTEPAD = ResourceLocation.fromNamespaceAndPath("notepad", "textures/gui/notepad.png");
-    private static final ResourceLocation TEX_ICON    = ResourceLocation.fromNamespaceAndPath("notepad", "textures/icon.png");
+    private static final ResourceLocation TEX_NOTEPAD = ResourceLocation.fromNamespaceAndPath("notely", "textures/gui/notepad.png");
 
-
-    private static final int MOD_CTRL  = 2;
+    private static final int MOD_CTRL = 2;
     private static final int MOD_SHIFT = 1;
 
     // =========================================================
     // Constructor
     // =========================================================
 
-    public NotepadScreen() {
+    public NotelyScreen() {
         super(Component.empty());
         var rng = new java.util.Random(42);
         int cols = (W - LIST_W) / 4 + 2;
@@ -116,8 +109,8 @@ public class NotepadScreen extends Screen {
             tornTop[i] = rng.nextInt(TORN);
             tornBot[i] = rng.nextInt(TORN);
         }
-        if (!NotepadData.notes.isEmpty()) {
-            selected = NotepadData.notes.get(0);
+        if (!NotelyData.notes.isEmpty()) {
+            selected = NotelyData.notes.get(0);
             cursor = selected.content.length();
         }
     }
@@ -135,25 +128,25 @@ public class NotepadScreen extends Screen {
         int toolY = oy + TORN + 3;
 
         btnAdd = addRenderableWidget(Button.builder(
-            Component.translatable("notely.button.new_note"), b -> newNote()
+                Component.translatable("notely.button.new_note"), b -> newNote()
         ).pos(ox + 3, oy + H - TORN - 18).size(LIST_W - 6, 14).build());
 
         btnPin = addRenderableWidget(Button.builder(
-            Component.translatable("notely.button.pin"), b -> toggleColorPicker()
+                Component.translatable("notely.button.pin"), b -> toggleColorPicker()
         ).pos(ox + W - 34, toolY - 1).size(14, 13).build());
 
         btnHelp = addRenderableWidget(Button.builder(
-            Component.translatable("notely.button.help"), b -> createHelpNote()
+                Component.translatable("notely.button.help"), b -> createHelpNote()
         ).pos(ox + LIST_W - 16, toolY).size(14, 13).build());
 
         btnClose = addRenderableWidget(Button.builder(
-            Component.translatable("notely.button.close"), b -> onClose()
+                Component.translatable("notely.button.close"), b -> onClose()
         ).pos(ox + W - 18, toolY - 1).size(15, 13).build());
 
         for (int i = 0; i < STICKER_COLORS.length; i++) {
             final int ci = i;
             Button cb = addRenderableWidget(Button.builder(
-                Component.literal(" "), b -> pinWithColor(STICKER_COLORS[ci])
+                    Component.literal(" "), b -> pinWithColor(STICKER_COLORS[ci])
             ).pos(ox + W - 50 - i * 17, toolY + 1).size(15, 11).build());
             cb.visible = false;
             colorBtns.add(cb);
@@ -175,7 +168,7 @@ public class NotepadScreen extends Screen {
     // =========================================================
 
     private void newNote() {
-        Note n = NotepadData.createNote();
+        Note n = NotelyData.createNote();
         n.title = Component.translatable("notely.button.new_note").getString();
         selected = n;
         cursor = 0;
@@ -187,29 +180,29 @@ public class NotepadScreen extends Screen {
     }
 
     private void createHelpNote() {
-        Note note = NotepadData.createNote();
+        Note note = NotelyData.createNote();
         note.title = Component.translatable("notely.help.title").getString();
         note.content = Component.translatable("notely.help.content").getString();
         selected = note;
         cursor = note.content.length();
         textOffset = 0;
         renamingTitle = false;
-        NotepadData.save();
+        NotelyData.save();
         refreshWidgets();
     }
-
-    private void deleteSelected() {
-        if (selected == null) return;
-        NotepadData.deleteNote(selected.id);
-        selected = NotepadData.notes.isEmpty() ? null : NotepadData.notes.get(0);
-        cursor = selected != null ? selected.content.length() : 0;
-        textOffset = 0;
-        renamingTitle = false;
-        refreshWidgets();
-    }
+//
+//    private void deleteSelected() {
+//        if (selected == null) return;
+//        NotepadData.deleteNote(selected.id);
+//        selected = NotepadData.notes.isEmpty() ? null : NotepadData.notes.get(0);
+//        cursor = selected != null ? selected.content.length() : 0;
+//        textOffset = 0;
+//        renamingTitle = false;
+//        refreshWidgets();
+//    }
 
     private void openNote(Note note) {
-        if (selected != null) NotepadData.save();
+        if (selected != null) NotelyData.save();
         selected = note;
         cursor = note.content.length();
         textOffset = 0;
@@ -230,8 +223,8 @@ public class NotepadScreen extends Screen {
     private void pinWithColor(int color) {
         if (selected == null) return;
         float px = width - 210f;
-        float py = 40f + (NotepadData.stickers.size() * 25) % (height - 140);
-        NotepadData.pinNote(selected.id, px, py, color);
+        float py = 40f + (NotelyData.stickers.size() * 25) % (height - 140);
+        NotelyData.pinNote(selected.id, px, py, color);
         pickingColor = false;
         refreshWidgets();
     }
@@ -244,7 +237,7 @@ public class NotepadScreen extends Screen {
         if (selected != null)
             selected.title = titleBuffer.isBlank() ? "Note" : titleBuffer.trim();
         renamingTitle = false;
-        NotepadData.save();
+        NotelyData.save();
     }
 
     // =========================================================
@@ -252,22 +245,28 @@ public class NotepadScreen extends Screen {
     // =========================================================
 
     @Override
-    public void renderBackground(GuiGraphics g, int mx, int my, float dt) {}
+    public void renderBackground(GuiGraphics g, int mx, int my, float dt) {
+    }
 
     @Override
     public void onClose() {
         if (renamingTitle && selected != null) commitRename();
-        NotepadData.save();
+        NotelyData.save();
         super.onClose();
     }
 
     @Override
     public void tick() {
-        if (++cursorTimer >= 10) { cursorTimer = 0; cursorVisible = !cursorVisible; }
+        if (++cursorTimer >= 10) {
+            cursorTimer = 0;
+            cursorVisible = !cursorVisible;
+        }
     }
 
     @Override
-    public boolean isPauseScreen() { return false; }
+    public boolean isPauseScreen() {
+        return false;
+    }
 
     // =========================================================
     // Keyboard input
@@ -275,22 +274,38 @@ public class NotepadScreen extends Screen {
 
     @Override
     public boolean keyPressed(int key, int scan, int mods) {
-        if (key == GLFW.GLFW_KEY_ESCAPE) { onClose(); return true; }
+        if (key == GLFW.GLFW_KEY_ESCAPE) {
+            onClose();
+            return true;
+        }
 
         if (renamingTitle) return handleTitleKey(key, mods);
         if (selected == null) return super.keyPressed(key, scan, mods);
 
         String t = selected.content;
-        boolean ctrl  = (mods & MOD_CTRL)  != 0;
+        boolean ctrl = (mods & MOD_CTRL) != 0;
         boolean shift = (mods & MOD_SHIFT) != 0;
 
-        if (ctrl && key == GLFW.GLFW_KEY_Z) { undo(); return true; }
-        if (ctrl && key == GLFW.GLFW_KEY_V) { pasteFromClipboard(); return true; }
-        if (ctrl && key == GLFW.GLFW_KEY_A) { selectionStart = 0; cursor = t.length(); return true; }
+        if (ctrl && key == GLFW.GLFW_KEY_Z) {
+            undo();
+            return true;
+        }
+        if (ctrl && key == GLFW.GLFW_KEY_V) {
+            pasteFromClipboard();
+            return true;
+        }
+        if (ctrl && key == GLFW.GLFW_KEY_A) {
+            selectionStart = 0;
+            cursor = t.length();
+            return true;
+        }
 
         switch (key) {
             case GLFW.GLFW_KEY_BACKSPACE -> {
-                if (hasSelection()) { deleteSelection(); return true; }
+                if (hasSelection()) {
+                    deleteSelection();
+                    return true;
+                }
                 pushUndo();
                 if (ctrl) {
                     int p = TextCursor.wordBoundaryLeft(t, cursor);
@@ -303,7 +318,10 @@ public class NotepadScreen extends Screen {
                 return true;
             }
             case GLFW.GLFW_KEY_DELETE -> {
-                if (hasSelection()) { deleteSelection(); return true; }
+                if (hasSelection()) {
+                    deleteSelection();
+                    return true;
+                }
                 pushUndo();
                 if (ctrl) {
                     int p = TextCursor.wordBoundaryRight(t, cursor);
@@ -314,33 +332,81 @@ public class NotepadScreen extends Screen {
                 return true;
             }
             case GLFW.GLFW_KEY_LEFT -> {
-                if (!shift && hasSelection()) { cursor = selMin(); selectionStart = -1; }
-                else { if (shift && !hasSelection()) selectionStart = cursor; cursor = ctrl ? TextCursor.wordBoundaryLeft(t, cursor) : Math.max(0, cursor - 1); if (shift && cursor == selectionStart) selectionStart = -1; }
+                if (!shift && hasSelection()) {
+                    cursor = selMin();
+                    selectionStart = -1;
+                } else {
+                    if (shift && !hasSelection()) selectionStart = cursor;
+                    cursor = ctrl ? TextCursor.wordBoundaryLeft(t, cursor) : Math.max(0, cursor - 1);
+                    if (shift && cursor == selectionStart) selectionStart = -1;
+                }
                 return true;
             }
             case GLFW.GLFW_KEY_RIGHT -> {
-                if (!shift && hasSelection()) { cursor = selMax(); selectionStart = -1; }
-                else { if (shift && !hasSelection()) selectionStart = cursor; cursor = ctrl ? TextCursor.wordBoundaryRight(t, cursor) : Math.min(t.length(), cursor + 1); if (shift && cursor == selectionStart) selectionStart = -1; }
+                if (!shift && hasSelection()) {
+                    cursor = selMax();
+                    selectionStart = -1;
+                } else {
+                    if (shift && !hasSelection()) selectionStart = cursor;
+                    cursor = ctrl ? TextCursor.wordBoundaryRight(t, cursor) : Math.min(t.length(), cursor + 1);
+                    if (shift && cursor == selectionStart) selectionStart = -1;
+                }
                 return true;
             }
-            case GLFW.GLFW_KEY_UP    -> { if (shift && !hasSelection()) selectionStart = cursor; cursor = TextCursor.moveVertically(t, cursor, -1); if (!shift) selectionStart = -1; return true; }
-            case GLFW.GLFW_KEY_DOWN  -> { if (shift && !hasSelection()) selectionStart = cursor; cursor = TextCursor.moveVertically(t, cursor,  1); if (!shift) selectionStart = -1; return true; }
-            case GLFW.GLFW_KEY_HOME  -> { if (shift && !hasSelection()) selectionStart = cursor; cursor = ctrl ? 0          : TextCursor.lineStart(t, cursor); if (!shift) selectionStart = -1; return true; }
-            case GLFW.GLFW_KEY_END   -> { if (shift && !hasSelection()) selectionStart = cursor; cursor = ctrl ? t.length() : TextCursor.lineEnd(t, cursor);   if (!shift) selectionStart = -1; return true; }
-            case GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> { typeChar('\n'); return true; }
-            case GLFW.GLFW_KEY_TAB                            -> { typeChar('\t'); return true; }
+            case GLFW.GLFW_KEY_UP -> {
+                if (shift && !hasSelection()) selectionStart = cursor;
+                cursor = TextCursor.moveVertically(t, cursor, -1);
+                if (!shift) selectionStart = -1;
+                return true;
+            }
+            case GLFW.GLFW_KEY_DOWN -> {
+                if (shift && !hasSelection()) selectionStart = cursor;
+                cursor = TextCursor.moveVertically(t, cursor, 1);
+                if (!shift) selectionStart = -1;
+                return true;
+            }
+            case GLFW.GLFW_KEY_HOME -> {
+                if (shift && !hasSelection()) selectionStart = cursor;
+                cursor = ctrl ? 0 : TextCursor.lineStart(t, cursor);
+                if (!shift) selectionStart = -1;
+                return true;
+            }
+            case GLFW.GLFW_KEY_END -> {
+                if (shift && !hasSelection()) selectionStart = cursor;
+                cursor = ctrl ? t.length() : TextCursor.lineEnd(t, cursor);
+                if (!shift) selectionStart = -1;
+                return true;
+            }
+            case GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> {
+                typeChar('\n');
+                return true;
+            }
+            case GLFW.GLFW_KEY_TAB -> {
+                typeChar('\t');
+                return true;
+            }
         }
         return super.keyPressed(key, scan, mods);
     }
 
     private boolean handleTitleKey(int key, int mods) {
-        boolean ctrl  = (mods & MOD_CTRL)  != 0;
+        boolean ctrl = (mods & MOD_CTRL) != 0;
         boolean shift = (mods & MOD_SHIFT) != 0;
         switch (key) {
-            case GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> { commitRename(); return true; }
-            case GLFW.GLFW_KEY_ESCAPE -> { commitRename(); return true; }
+            case GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> {
+                commitRename();
+                return true;
+            }
+            case GLFW.GLFW_KEY_ESCAPE -> {
+                commitRename();
+                return true;
+            }
             case GLFW.GLFW_KEY_BACKSPACE -> {
-                if (titleHasSel()) { pushTitleUndo(); titleDeleteSel(); return true; }
+                if (titleHasSel()) {
+                    pushTitleUndo();
+                    titleDeleteSel();
+                    return true;
+                }
                 if (ctrl) {
                     pushTitleUndo();
                     int p = TextCursor.wordBoundaryLeft(titleBuffer, titleCursor);
@@ -354,7 +420,11 @@ public class NotepadScreen extends Screen {
                 return true;
             }
             case GLFW.GLFW_KEY_DELETE -> {
-                if (titleHasSel()) { pushTitleUndo(); titleDeleteSel(); return true; }
+                if (titleHasSel()) {
+                    pushTitleUndo();
+                    titleDeleteSel();
+                    return true;
+                }
                 if (titleCursor < titleBuffer.length()) {
                     pushTitleUndo();
                     titleBuffer = titleBuffer.substring(0, titleCursor) + titleBuffer.substring(titleCursor + 1);
@@ -362,19 +432,44 @@ public class NotepadScreen extends Screen {
                 return true;
             }
             case GLFW.GLFW_KEY_LEFT -> {
-                if (!shift && titleHasSel()) { titleCursor = titleSelMin(); titleSelStart = -1; }
-                else { if (shift && !titleHasSel()) titleSelStart = titleCursor; titleCursor = ctrl ? TextCursor.wordBoundaryLeft(titleBuffer, titleCursor) : Math.max(0, titleCursor - 1); if (shift && titleCursor == titleSelStart) titleSelStart = -1; }
+                if (!shift && titleHasSel()) {
+                    titleCursor = titleSelMin();
+                    titleSelStart = -1;
+                } else {
+                    if (shift && !titleHasSel()) titleSelStart = titleCursor;
+                    titleCursor = ctrl ? TextCursor.wordBoundaryLeft(titleBuffer, titleCursor) : Math.max(0, titleCursor - 1);
+                    if (shift && titleCursor == titleSelStart) titleSelStart = -1;
+                }
                 return true;
             }
             case GLFW.GLFW_KEY_RIGHT -> {
-                if (!shift && titleHasSel()) { titleCursor = titleSelMax(); titleSelStart = -1; }
-                else { if (shift && !titleHasSel()) titleSelStart = titleCursor; titleCursor = ctrl ? TextCursor.wordBoundaryRight(titleBuffer, titleCursor) : Math.min(titleBuffer.length(), titleCursor + 1); if (shift && titleCursor == titleSelStart) titleSelStart = -1; }
+                if (!shift && titleHasSel()) {
+                    titleCursor = titleSelMax();
+                    titleSelStart = -1;
+                } else {
+                    if (shift && !titleHasSel()) titleSelStart = titleCursor;
+                    titleCursor = ctrl ? TextCursor.wordBoundaryRight(titleBuffer, titleCursor) : Math.min(titleBuffer.length(), titleCursor + 1);
+                    if (shift && titleCursor == titleSelStart) titleSelStart = -1;
+                }
                 return true;
             }
-            case GLFW.GLFW_KEY_HOME -> { if (shift && !titleHasSel()) titleSelStart = titleCursor; titleCursor = 0; if (!shift) titleSelStart = -1; return true; }
-            case GLFW.GLFW_KEY_END  -> { if (shift && !titleHasSel()) titleSelStart = titleCursor; titleCursor = titleBuffer.length(); if (!shift) titleSelStart = -1; return true; }
+            case GLFW.GLFW_KEY_HOME -> {
+                if (shift && !titleHasSel()) titleSelStart = titleCursor;
+                titleCursor = 0;
+                if (!shift) titleSelStart = -1;
+                return true;
+            }
+            case GLFW.GLFW_KEY_END -> {
+                if (shift && !titleHasSel()) titleSelStart = titleCursor;
+                titleCursor = titleBuffer.length();
+                if (!shift) titleSelStart = -1;
+                return true;
+            }
             case GLFW.GLFW_KEY_A -> {
-                if (ctrl) { titleSelStart = 0; titleCursor = titleBuffer.length(); }
+                if (ctrl) {
+                    titleSelStart = 0;
+                    titleCursor = titleBuffer.length();
+                }
                 return true;
             }
             case GLFW.GLFW_KEY_V -> {
@@ -390,8 +485,10 @@ public class NotepadScreen extends Screen {
     }
 
     private void pasteTitleFromClipboard() {
-        if (titleHasSel()) { pushTitleUndo(); titleDeleteSel(); }
-        else pushTitleUndo();
+        if (titleHasSel()) {
+            pushTitleUndo();
+            titleDeleteSel();
+        } else pushTitleUndo();
         String clip = minecraft.keyboardHandler.getClipboard();
         if (clip == null || clip.isEmpty()) return;
         clip = clip.replaceAll("[\\r\\n]", " ").replaceAll("[^\\x20-\\x7E]", "");
@@ -415,13 +512,16 @@ public class NotepadScreen extends Screen {
             }
             return true;
         }
-        if (selected != null && c >= 32 && c != 127) { typeChar(c); return true; }
+        if (selected != null && c >= 32 && c != 127) {
+            typeChar(c);
+            return true;
+        }
         return false;
     }
 
     private void typeChar(char c) {
         if (hasSelection()) deleteSelection();
-        if (selected.content.length() >= NotepadData.MAX_CONTENT_LENGTH) return;
+        if (selected.content.length() >= NotelyData.MAX_CONTENT_LENGTH) return;
         pushUndo();
         selected.content = selected.content.substring(0, cursor) + c + selected.content.substring(cursor);
         cursor++;
@@ -433,12 +533,12 @@ public class NotepadScreen extends Screen {
         String clip = minecraft.keyboardHandler.getClipboard();
         if (clip == null || clip.isEmpty()) return;
         clip = clip.chars()
-            .filter(c -> c == '\n' || c == '\t' || (c >= 32 && c != 127))
-            .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
-            .toString();
+                .filter(c -> c == '\n' || c == '\t' || (c >= 32 && c != 127))
+                .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
+                .toString();
         if (clip.isEmpty()) return;
         String t = selected.content;
-        int available = NotepadData.MAX_CONTENT_LENGTH - t.length();
+        int available = NotelyData.MAX_CONTENT_LENGTH - t.length();
         if (available <= 0) return;
         if (clip.length() > available) clip = clip.substring(0, available);
         pushUndo();
@@ -462,8 +562,11 @@ public class NotepadScreen extends Screen {
         int sep = snapshot.lastIndexOf('\u0000');
         if (sep >= 0) {
             selected.content = snapshot.substring(0, sep);
-            try { cursor = Math.min(Integer.parseInt(snapshot.substring(sep + 1)), selected.content.length()); }
-            catch (NumberFormatException ignored) { cursor = selected.content.length(); }
+            try {
+                cursor = Math.min(Integer.parseInt(snapshot.substring(sep + 1)), selected.content.length());
+            } catch (NumberFormatException ignored) {
+                cursor = selected.content.length();
+            }
         }
     }
 
@@ -478,8 +581,11 @@ public class NotepadScreen extends Screen {
         int sep = snapshot.lastIndexOf('\u0000');
         if (sep >= 0) {
             titleBuffer = snapshot.substring(0, sep);
-            try { titleCursor = Math.min(Integer.parseInt(snapshot.substring(sep + 1)), titleBuffer.length()); }
-            catch (NumberFormatException ignored) { titleCursor = titleBuffer.length(); }
+            try {
+                titleCursor = Math.min(Integer.parseInt(snapshot.substring(sep + 1)), titleBuffer.length());
+            } catch (NumberFormatException ignored) {
+                titleCursor = titleBuffer.length();
+            }
             titleSelStart = -1;
         }
     }
@@ -488,9 +594,17 @@ public class NotepadScreen extends Screen {
     // Selection helpers — content editor
     // =========================================================
 
-    private boolean hasSelection() { return selectionStart >= 0 && selectionStart != cursor; }
-    private int selMin() { return Math.min(selectionStart, cursor); }
-    private int selMax() { return Math.max(selectionStart, cursor); }
+    private boolean hasSelection() {
+        return selectionStart >= 0 && selectionStart != cursor;
+    }
+
+    private int selMin() {
+        return Math.min(selectionStart, cursor);
+    }
+
+    private int selMax() {
+        return Math.max(selectionStart, cursor);
+    }
 
     private void deleteSelection() {
         if (!hasSelection()) return;
@@ -505,9 +619,17 @@ public class NotepadScreen extends Screen {
     // Selection helpers — title editor
     // =========================================================
 
-    private boolean titleHasSel() { return titleSelStart >= 0 && titleSelStart != titleCursor; }
-    private int titleSelMin() { return Math.min(titleSelStart, titleCursor); }
-    private int titleSelMax() { return Math.max(titleSelStart, titleCursor); }
+    private boolean titleHasSel() {
+        return titleSelStart >= 0 && titleSelStart != titleCursor;
+    }
+
+    private int titleSelMin() {
+        return Math.min(titleSelStart, titleCursor);
+    }
+
+    private int titleSelMax() {
+        return Math.max(titleSelStart, titleCursor);
+    }
 
     private void titleDeleteSel() {
         if (!titleHasSel()) return;
@@ -536,7 +658,7 @@ public class NotepadScreen extends Screen {
             int visible = visibleListRows();
             for (int i = 0; i < visible; i++) {
                 int idx = listOffset + i;
-                if (idx >= NotepadData.notes.size()) break;
+                if (idx >= NotelyData.notes.size()) break;
                 int ry = oy + TORN + 16 + i * ROW_H;
                 if (iy >= ry && iy < ry + ROW_H) {
                     contextMenuNoteIdx = idx;
@@ -552,9 +674,12 @@ public class NotepadScreen extends Screen {
             int visible = visibleListRows();
             for (int i = 0; i < visible; i++) {
                 int idx = listOffset + i;
-                if (idx >= NotepadData.notes.size()) break;
+                if (idx >= NotelyData.notes.size()) break;
                 int ry = oy + TORN + 16 + i * ROW_H;
-                if (iy >= ry && iy < ry + ROW_H) { openNote(NotepadData.notes.get(idx)); return true; }
+                if (iy >= ry && iy < ry + ROW_H) {
+                    openNote(NotelyData.notes.get(idx));
+                    return true;
+                }
             }
         }
 
@@ -610,12 +735,17 @@ public class NotepadScreen extends Screen {
         for (int i = 0; i < 3; i++) {
             int itemY = contextMenuY + i * itemH;
             if (ix >= contextMenuX && ix < contextMenuX + menuW && iy >= itemY && iy < itemY + itemH) {
-                if (contextMenuNoteIdx < NotepadData.notes.size()) {
-                    Note note = NotepadData.notes.get(contextMenuNoteIdx);
+                if (contextMenuNoteIdx < NotelyData.notes.size()) {
+                    Note note = NotelyData.notes.get(contextMenuNoteIdx);
                     switch (i) {
                         case 0 -> openNote(note);
-                        case 1 -> { openNote(note); renamingTitle = true; titleBuffer = note.title; titleCursor = titleBuffer.length(); }
-                        case 2 -> NotepadData.deleteNote(note.id);
+                        case 1 -> {
+                            openNote(note);
+                            renamingTitle = true;
+                            titleBuffer = note.title;
+                            titleCursor = titleBuffer.length();
+                        }
+                        case 2 -> NotelyData.deleteNote(note.id);
                     }
                 }
                 break;
@@ -647,7 +777,7 @@ public class NotepadScreen extends Screen {
             selected.content = t.substring(0, lineCharStart) + "[x] " + t.substring(lineCharStart + 4);
         else if (prefix.equals("[x] "))
             selected.content = t.substring(0, lineCharStart) + "[ ] " + t.substring(lineCharStart + 4);
-        NotepadData.save();
+        NotelyData.save();
     }
 
     @Override
@@ -706,7 +836,7 @@ public class NotepadScreen extends Screen {
     @Override
     public boolean mouseScrolled(double mx, double my, double dx, double dy) {
         if ((int) mx < ox + LIST_W) {
-            listOffset = Mth.clamp((int) (listOffset - dy), 0, Math.max(0, NotepadData.notes.size() - visibleListRows()));
+            listOffset = Mth.clamp((int) (listOffset - dy), 0, Math.max(0, NotelyData.notes.size() - visibleListRows()));
         } else {
             textOffset = Mth.clamp((int) (textOffset - dy), 0, Math.max(0, countTextLines() - visibleEditorLines()));
         }
@@ -736,10 +866,6 @@ public class NotepadScreen extends Screen {
         // Toolbar strip
         g.fill(x + LIST_W + 1, y + TORN, x + W, y + TORN + 17, COL_TOOLBAR);
 
-        // Icon in toolbar (16x16) - removed, icon is for mod metadata only
-
-        // Binding holes are part of the background texture
-
         // Ruled lines
         int mx2 = ox + LIST_W + 22;
         int contentY = oy + TORN + 32;
@@ -759,24 +885,25 @@ public class NotepadScreen extends Screen {
         int visible = visibleListRows();
         for (int i = 0; i <= visible; i++) {
             int idx = listOffset + i;
-            if (idx >= NotepadData.notes.size()) break;
-            Note note = NotepadData.notes.get(idx);
+            if (idx >= NotelyData.notes.size()) break;
+            Note note = NotelyData.notes.get(idx);
             int ry = oy + TORN + 16 + i * ROW_H;
             boolean hov = mx >= ox + 2 && mx < ox + LIST_W - 2 && my >= ry && my < ry + ROW_H;
             boolean isSel = note == selected;
-            if (isSel)       g.fill(ox + 2, ry, ox + LIST_W - 2, ry + ROW_H - 2, COL_SEL);
-            else if (hov)    g.fill(ox + 2, ry, ox + LIST_W - 2, ry + ROW_H - 2, COL_HOVER);
-            boolean pinned = NotepadData.stickers.stream().anyMatch(s -> s.noteId.equals(note.id));
+            if (isSel) g.fill(ox + 2, ry, ox + LIST_W - 2, ry + ROW_H - 2, COL_SEL);
+            else if (hov) g.fill(ox + 2, ry, ox + LIST_W - 2, ry + ROW_H - 2, COL_HOVER);
+            boolean pinned = NotelyData.stickers.stream().anyMatch(s -> s.noteId.equals(note.id));
             int maxTW = LIST_W - (pinned ? 22 : 8);
             g.drawString(font, font.plainSubstrByWidth(note.title, maxTW), ox + 5, ry + 6,
-                isSel ? MarkdownRenderer.COL_TEXT : MarkdownRenderer.COL_HINT, false);
-            if (pinned) g.drawString(font, Component.translatable("notely.list.pinned_marker").getString(), ox + LIST_W - 10, ry + 6, 0xFFFF8800, false);
+                    isSel ? MarkdownRenderer.COL_TEXT : MarkdownRenderer.COL_HINT, false);
+            if (pinned)
+                g.drawString(font, Component.translatable("notely.list.pinned_marker").getString(), ox + LIST_W - 10, ry + 6, 0xFFFF8800, false);
         }
 
         g.disableScissor();
 
         // Scrollbar
-        int total = NotepadData.notes.size();
+        int total = NotelyData.notes.size();
         if (total > visible) {
             float scroll = (float) listOffset / (total - visible);
             int barH = clipY2 - clipY1;
@@ -791,7 +918,7 @@ public class NotepadScreen extends Screen {
         int ex = ox + LIST_W + 24; // +2px indent from red margin line
         int titleY = oy + TORN + 18;
         int contentY = titleY + 16;
-        int clipTop = contentY , clipBot = oy + H - TORN - 20;
+        int clipTop = contentY, clipBot = oy + H - TORN - 20;
 
         if (selected == null) {
             g.drawString(font, Component.translatable("notely.editor.select_note").getString(), ex, contentY + 20, MarkdownRenderer.COL_HINT, false);
@@ -873,10 +1000,10 @@ public class NotepadScreen extends Screen {
                     if (hasSelection()) {
                         int lo = selMin(), hi = selMax();
                         int lineStart = segCharStart;
-                        int lineEnd   = segCharEnd;
+                        int lineEnd = segCharEnd;
                         if (lo < lineEnd && hi > lineStart) {
                             int selLo = Math.max(lo, lineStart) - lineStart;
-                            int selHi = Math.min(hi, lineEnd)   - lineStart;
+                            int selHi = Math.min(hi, lineEnd) - lineStart;
                             String rawSub = raw.substring(0, Math.min(raw.length(), lineEnd - lineStart));
                             int x1 = ex + xOff + font.width(rawSub.substring(0, Math.min(selLo, rawSub.length())));
                             int x2 = ex + xOff + font.width(rawSub.substring(0, Math.min(selHi, rawSub.length())));
@@ -925,9 +1052,9 @@ public class NotepadScreen extends Screen {
         if (contextMenuNoteIdx < 0) return;
         int itemH = 14, menuW = 90;
         String[] items = {
-            Component.translatable("notely.context.open").getString(),
-            Component.translatable("notely.context.rename").getString(),
-            Component.translatable("notely.context.delete").getString()
+                Component.translatable("notely.context.open").getString(),
+                Component.translatable("notely.context.rename").getString(),
+                Component.translatable("notely.context.delete").getString()
         };
         g.fill(contextMenuX - 1, contextMenuY - 1, contextMenuX + menuW + 1, contextMenuY + items.length * itemH + 1, COL_BORDER);
         g.fill(contextMenuX, contextMenuY, contextMenuX + menuW, contextMenuY + items.length * itemH, COL_LIST);
@@ -961,9 +1088,17 @@ public class NotepadScreen extends Screen {
     // Layout helpers
     // =========================================================
 
-    private int visibleListRows()   { return (H - TORN * 2 - 22) / ROW_H; }
-    private int visibleEditorLines(){ return (H - TORN * 2 - 36) / LINE_H; }
-    private int editorMaxW()        { return W - LIST_W - 32; }
+    private int visibleListRows() {
+        return (H - TORN * 2 - 22) / ROW_H;
+    }
+
+    private int visibleEditorLines() {
+        return (H - TORN * 2 - 36) / LINE_H;
+    }
+
+    private int editorMaxW() {
+        return W - LIST_W - 32;
+    }
 
     private int countTextLines() {
         if (selected == null) return 0;

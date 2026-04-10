@@ -1,18 +1,18 @@
 package by.deokma.notely;
 
-import by.deokma.notely.gui.NotepadScreen;
+import by.deokma.notely.gui.NotelyScreen;
 import by.deokma.notely.gui.PinnedNotesOverlay;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWScrollCallbackI;
 
-public class NotepadModClient {
+public class NotelyModClient {
 
     public static KeyMapping openKey;
 
     public static void init() {
-        NotepadData.load();
+        NotelyData.load();
     }
 
     /** Called after the game window is created — safe to access GLFW. */
@@ -22,7 +22,7 @@ public class NotepadModClient {
         GLFWScrollCallbackI existing = GLFW.glfwSetScrollCallback(window, null);
         GLFW.glfwSetScrollCallback(window, (win, dx, dy) -> {
             if (existing != null) existing.invoke(win, dx, dy);
-            if (!(mc.screen instanceof NotepadScreen)) {
+            if (!(mc.screen instanceof NotelyScreen)) {
                 onMouseScroll(mc.mouseHandler.xpos(), mc.mouseHandler.ypos(), dy);
             }
         });
@@ -30,21 +30,21 @@ public class NotepadModClient {
 
     /** Called when joining a singleplayer world. */
     public static void onJoinWorld(String worldFolderName) {
-        NotepadData.loadForContext(worldFolderName);
+        NotelyData.loadForContext(worldFolderName);
     }
 
     /** Called when connecting to a multiplayer server. */
     public static void onJoinServer(String serverAddress) {
-        NotepadData.loadForContext("server_" + serverAddress);
+        NotelyData.loadForContext("server_" + serverAddress);
     }
 
     /** Called on disconnect from any world or server. */
     public static void onLeave() {
-        NotepadData.clearContext();
+        NotelyData.clearContext();
     }
 
     public static KeyMapping createKeyMapping() {
-        openKey = new KeyMapping("key.notepad.open", GLFW.GLFW_KEY_N, "key.categories.notepad");
+        openKey = new KeyMapping("key.notely.open", GLFW.GLFW_KEY_N, "key.categories.notely");
         return openKey;
     }
 
@@ -52,26 +52,26 @@ public class NotepadModClient {
         if (openKey != null && openKey.consumeClick()) {
             Minecraft mc = Minecraft.getInstance();
             if (mc.screen == null) {
-                mc.setScreen(new NotepadScreen());
+                mc.setScreen(new NotelyScreen());
             }
         }
     }
 
     public static boolean onMousePress(double rawX, double rawY) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.screen instanceof NotepadScreen) return false;
+        if (mc.screen instanceof NotelyScreen) return false;
         return PinnedNotesOverlay.handlePress(rawX, rawY, mc);
     }
 
     public static boolean onMouseScroll(double rawX, double rawY, double delta) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.screen instanceof NotepadScreen) return false;
+        if (mc.screen instanceof NotelyScreen) return false;
         return PinnedNotesOverlay.handleScroll(rawX, rawY, delta, mc);
     }
 
     public static void onMouseHeld(double rawX, double rawY) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.screen instanceof NotepadScreen) return;
+        if (mc.screen instanceof NotelyScreen) return;
         PinnedNotesOverlay.handleDrag(rawX, rawY, mc);
     }
 

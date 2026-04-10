@@ -1,8 +1,8 @@
 package by.deokma.notely.gui;
 
-import by.deokma.notely.NotepadData;
-import by.deokma.notely.NotepadData.Note;
-import by.deokma.notely.NotepadData.Sticker;
+import by.deokma.notely.NotelyData;
+import by.deokma.notely.NotelyData.Note;
+import by.deokma.notely.NotelyData.Sticker;
 import by.deokma.notely.util.MarkdownRenderer;
 import by.deokma.notely.util.MarkdownRenderer.LineType;
 import net.minecraft.client.Minecraft;
@@ -12,14 +12,14 @@ import java.util.List;
 
 public class PinnedNotesOverlay {
 
-    private static final int HEADER      = 14;
-    private static final int PAD         = 5;
-    private static final int MIN_W       = 80;
-    private static final int MIN_H       = 50;
+    private static final int HEADER = 14;
+    private static final int PAD = 5;
+    private static final int MIN_W = 80;
+    private static final int MIN_H = 50;
     private static final int RESIZE_ZONE = 10;
-    private static final int LINE_H      = 10;
+    private static final int LINE_H = 10;
 
-    private static Sticker dragged  = null;
+    private static Sticker dragged = null;
     private static boolean resizing = false;
     private static float dragOX, dragOY;
 
@@ -32,18 +32,18 @@ public class PinnedNotesOverlay {
         Minecraft mc = Minecraft.getInstance();
         int mx = scaled(mc.mouseHandler.xpos(), mc.getWindow().getScreenWidth(), sw);
         int my = scaled(mc.mouseHandler.ypos(), mc.getWindow().getScreenHeight(), sh);
-        List<Sticker> list = NotepadData.stickers;
+        List<Sticker> list = NotelyData.stickers;
         for (int i = list.size() - 1; i >= 0; i--) {
             drawSticker(gfx, mc, list.get(i), mx, my);
         }
     }
 
     private static void drawSticker(GuiGraphics gfx, Minecraft mc, Sticker s, int mx, int my) {
-        Note note = NotepadData.findNote(s.noteId);
+        Note note = NotelyData.findNote(s.noteId);
         int x = (int) s.x, y = (int) s.y, w = (int) s.width, h = (int) s.height;
 
         int alpha = s.transparent ? 0x88 : 0xFF;
-        int bodyColor   = (alpha << 24) | (s.color & 0x00FFFFFF);
+        int bodyColor = (alpha << 24) | (s.color & 0x00FFFFFF);
         int headerColor = (alpha << 24) | (darken(s.color, 0.82f) & 0x00FFFFFF);
 
         // Shadow + body
@@ -123,14 +123,14 @@ public class PinnedNotesOverlay {
     }
 
     private static void drawStickerLineScaled(GuiGraphics gfx, Minecraft mc, Sticker s,
-            String line, int x, int ty, int maxW, int relMx, int relMy, int alpha) {
+                                              String line, int x, int ty, int maxW, int relMx, int relMy, int alpha) {
         // Reuse drawStickerLine with fake absolute coords — pass 0,0 as sticker origin
         // and adjust: x=0, ty=ty, w=maxW+PAD*2 (we already translated)
         drawStickerLine(gfx, mc, s, line, -PAD, ty, maxW + PAD * 2, relMx, relMy, alpha);
     }
 
     private static void drawStickerLine(GuiGraphics gfx, Minecraft mc, Sticker s,
-            String line, int x, int ty, int w, int mx, int my, int alpha) {
+                                        String line, int x, int ty, int w, int mx, int my, int alpha) {
         int ink = (alpha << 24) | 0x001A0A00;
         LineType type = MarkdownRenderer.detectLineType(line);
         int maxW = w - PAD * 2;
@@ -141,8 +141,10 @@ public class PinnedNotesOverlay {
                 gfx.drawString(mc.font, t, x + PAD, ty, (alpha << 24) | 0x003A2000, false);
                 gfx.fill(x + PAD, ty + LINE_H - 1, x + PAD + mc.font.width(t), ty + LINE_H, (alpha << 24) | 0x003A2000);
             }
-            case H2 -> gfx.drawString(mc.font, mc.font.plainSubstrByWidth(line.substring(3), maxW), x + PAD, ty, (alpha << 24) | 0x005A3800, false);
-            case H3 -> gfx.drawString(mc.font, mc.font.plainSubstrByWidth(line.substring(4), maxW), x + PAD, ty, (alpha << 24) | 0x009B8A6A, false);
+            case H2 ->
+                    gfx.drawString(mc.font, mc.font.plainSubstrByWidth(line.substring(3), maxW), x + PAD, ty, (alpha << 24) | 0x005A3800, false);
+            case H3 ->
+                    gfx.drawString(mc.font, mc.font.plainSubstrByWidth(line.substring(4), maxW), x + PAD, ty, (alpha << 24) | 0x009B8A6A, false);
             case HR -> {
                 int mid = ty + LINE_H / 2;
                 gfx.fill(x + PAD, mid, x + w - PAD, mid + 1, (alpha << 24) | 0x008B7355);
@@ -157,13 +159,14 @@ public class PinnedNotesOverlay {
                 gfx.fill(x + PAD - 1, ty - 1, x + PAD + mc.font.width(fit) + 3, ty + LINE_H, 0x22000000);
                 gfx.drawString(mc.font, fit, x + PAD + 1, ty, (alpha << 24) | 0x004A7A30, false);
             }
-            case TODO_OPEN, TODO_DONE -> drawStickerTodo(gfx, mc, s, line, x, ty, w, mx, my, alpha, ink, type == LineType.TODO_DONE);
+            case TODO_OPEN, TODO_DONE ->
+                    drawStickerTodo(gfx, mc, s, line, x, ty, w, mx, my, alpha, ink, type == LineType.TODO_DONE);
             default -> gfx.drawString(mc.font, mc.font.plainSubstrByWidth(line, maxW), x + PAD, ty, ink, false);
         }
     }
 
     private static void drawStickerTodo(GuiGraphics gfx, Minecraft mc, Sticker s,
-            String line, int x, int ty, int w, int mx, int my, int alpha, int ink, boolean done) {
+                                        String line, int x, int ty, int w, int mx, int my, int alpha, int ink, boolean done) {
         MarkdownRenderer.drawCheckbox(gfx, x + PAD, ty, done);
         boolean hov = mx >= x + PAD && mx < x + PAD + 9 && my >= ty && my < ty + 7;
         if (hov) gfx.fill(x + PAD - 1, ty - 1, x + PAD + 8, ty + 8, 0x44FFFFFF);
@@ -183,7 +186,7 @@ public class PinnedNotesOverlay {
         int mx = scaled(rawX, mc.getWindow().getScreenWidth(), sw);
         int my = scaled(rawY, mc.getWindow().getScreenHeight(), sh);
 
-        List<Sticker> list = NotepadData.stickers;
+        List<Sticker> list = NotelyData.stickers;
         for (int i = list.size() - 1; i >= 0; i--) {
             Sticker s = list.get(i);
             int x = (int) s.x, y = (int) s.y, w = (int) s.width, h = (int) s.height;
@@ -191,7 +194,7 @@ public class PinnedNotesOverlay {
 
             // Close button
             if (mx >= x + w - HEADER + 1 && my < y + HEADER) {
-                NotepadData.removeSticker(s);
+                NotelyData.removeSticker(s);
                 return true;
             }
 
@@ -199,7 +202,7 @@ public class PinnedNotesOverlay {
             int transBtn = x + w - HEADER * 2 + 1;
             if (mx >= transBtn && mx < x + w - HEADER + 1 && my < y + HEADER) {
                 s.transparent = !s.transparent;
-                NotepadData.save();
+                NotelyData.save();
                 return true;
             }
 
@@ -207,7 +210,8 @@ public class PinnedNotesOverlay {
 
             // Resize handle
             if (mx >= x + w - RESIZE_ZONE && my >= y + h - RESIZE_ZONE) {
-                dragged = s; resizing = true;
+                dragged = s;
+                resizing = true;
                 dragOX = mx - (s.x + s.width);
                 dragOY = my - (s.y + s.height);
                 return true;
@@ -215,7 +219,8 @@ public class PinnedNotesOverlay {
 
             // Drag by header
             if (my < y + HEADER && mx < x + w - HEADER + 1) {
-                dragged = s; resizing = false;
+                dragged = s;
+                resizing = false;
                 dragOX = mx - s.x;
                 dragOY = my - s.y;
                 return true;
@@ -230,7 +235,7 @@ public class PinnedNotesOverlay {
     }
 
     private static boolean tryToggleTodoInSticker(Sticker s, int mx, int my) {
-        Note note = NotepadData.findNote(s.noteId);
+        Note note = NotelyData.findNote(s.noteId);
         if (note == null) return false;
 
         int x = (int) s.x, y = (int) s.y, h = (int) s.height;
@@ -251,11 +256,11 @@ public class PinnedNotesOverlay {
                 if (mx >= x + PAD && mx < x + PAD + 9 && my >= ty && my < ty + 8) {
                     if (ci + 4 <= note.content.length()) {
                         String before = note.content.substring(0, ci);
-                        String after  = note.content.substring(ci + 4);
+                        String after = note.content.substring(ci + 4);
                         String newPrefix = note.content.startsWith("[ ] ", ci) ? "[x] " : "[ ] ";
                         note.content = before + newPrefix + after;
                     }
-                    NotepadData.save();
+                    NotelyData.save();
                     return true;
                 }
             }
@@ -272,7 +277,7 @@ public class PinnedNotesOverlay {
         float mx = (float) (rawX * sw / mc.getWindow().getScreenWidth());
         float my = (float) (rawY * sh / mc.getWindow().getScreenHeight());
         if (resizing) {
-            dragged.width  = Math.max(MIN_W, mx - dragOX - dragged.x);
+            dragged.width = Math.max(MIN_W, mx - dragOX - dragged.x);
             dragged.height = Math.max(MIN_H, my - dragOY - dragged.y);
         } else {
             dragged.x = mx - dragOX;
@@ -281,7 +286,11 @@ public class PinnedNotesOverlay {
     }
 
     public static void handleRelease() {
-        if (dragged != null) { NotepadData.save(); dragged = null; resizing = false; }
+        if (dragged != null) {
+            NotelyData.save();
+            dragged = null;
+            resizing = false;
+        }
     }
 
     public static boolean handleScroll(double rawX, double rawY, double delta, Minecraft mc) {
@@ -292,10 +301,10 @@ public class PinnedNotesOverlay {
 
         // Check if Ctrl is held
         long win = mc.getWindow().getWindow();
-        boolean ctrl = org.lwjgl.glfw.GLFW.glfwGetKey(win, org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_CONTROL)  == org.lwjgl.glfw.GLFW.GLFW_PRESS
-                    || org.lwjgl.glfw.GLFW.glfwGetKey(win, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_CONTROL) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+        boolean ctrl = org.lwjgl.glfw.GLFW.glfwGetKey(win, org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_CONTROL) == org.lwjgl.glfw.GLFW.GLFW_PRESS
+                || org.lwjgl.glfw.GLFW.glfwGetKey(win, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_CONTROL) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
 
-        List<Sticker> list = NotepadData.stickers;
+        List<Sticker> list = NotelyData.stickers;
         for (int i = list.size() - 1; i >= 0; i--) {
             Sticker s = list.get(i);
             int x = (int) s.x, y = (int) s.y, w = (int) s.width, h = (int) s.height;
@@ -304,11 +313,11 @@ public class PinnedNotesOverlay {
             if (ctrl) {
                 // Ctrl+scroll — change font size
                 s.fontSize = Math.max(0.5f, Math.min(2.0f, s.fontSize + (float) delta * 0.1f));
-                NotepadData.save();
+                NotelyData.save();
             } else {
                 // Normal scroll — scroll content
                 if (my < y + HEADER) continue;
-                Note note = NotepadData.findNote(s.noteId);
+                Note note = NotelyData.findNote(s.noteId);
                 if (note == null) continue;
                 int lineH = (int) (LINE_H * s.fontSize);
                 int lines = note.content.split("\n", -1).length;
@@ -321,7 +330,9 @@ public class PinnedNotesOverlay {
         return false;
     }
 
-    public static boolean isDragging() { return dragged != null; }
+    public static boolean isDragging() {
+        return dragged != null;
+    }
 
     // =========================================================
     // Utilities
@@ -334,8 +345,8 @@ public class PinnedNotesOverlay {
     private static int darken(int color, float f) {
         int a = (color >> 24) & 0xFF;
         int r = (int) Math.min(255, ((color >> 16) & 0xFF) * f);
-        int g = (int) Math.min(255, ((color >>  8) & 0xFF) * f);
-        int b = (int) Math.min(255, ( color        & 0xFF) * f);
+        int g = (int) Math.min(255, ((color >> 8) & 0xFF) * f);
+        int b = (int) Math.min(255, (color & 0xFF) * f);
         return (a << 24) | (r << 16) | (g << 8) | b;
     }
 }

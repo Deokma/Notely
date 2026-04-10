@@ -7,7 +7,7 @@
 //    }
 //}
 //
-//rootProject.name = 'notepad-mod'
+//rootProject.name = 'notely-mod'
 //include 'common', 'fabric', 'neoforge'
 
 pluginManagement {

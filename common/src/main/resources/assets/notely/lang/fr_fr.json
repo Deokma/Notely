@@ -1,6 +1,6 @@
 {
-  "key.notepad.open": "Ouvrir le bloc-notes",
-  "key.categories.notepad": "Bloc-notes",
+  "key.notely.open": "Ouvrir le bloc-notes",
+  "key.categories.notely": "Bloc-notes",
 
   "notely.button.new_note": "Nouvelle note",
   "notely.button.pin": "\uD83D\uDCCC",

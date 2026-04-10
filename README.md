@@ -1,21 +1,37 @@
 # Notely
 
-**Notely** is a client-side notepad mod for Minecraft with Markdown rendering and pinnable sticky notes on your HUD.
+**A client-side notepad mod for Minecraft with Markdown rendering and pinnable sticky notes.**
+
+> Take notes, track tasks, and pin reminders to your HUD — without ever leaving the game.
+
+---
+
+<!-- SCREENSHOT: Main notepad window -->
 
 ---
 
 ## Features
 
-- 📝 **In-game notepad** — open with `N` (rebindable in controls)
-- ✨ **Markdown rendering** — headings, quotes, code blocks, dividers, checkboxes
-- 📌 **HUD sticky notes** — pin any note as a floating sticker over the game
-- 🎨 **6 sticker colors** to choose from
-- 🔲 **Todo checkboxes** — clickable both in the editor and on stickers
-- 🔄 **Undo** — `Ctrl+Z` to revert edits
-- 🖱️ **Drag & resize** stickers with your mouse
-- 👁️ **Transparency toggle** per sticker
-- 🌍 **Localization** — EN, BY, UA, RU, DE, FR, ES, PT, PL, IT, NL, ZH, JA, KO and more
-- 💾 **Auto-save** to `notepad/notes.json` in your game folder
+### 📝 In-game Notepad
+Open a full notepad with `N` (rebindable). Write notes using Markdown — headings, quotes, code blocks, dividers, and todo checkboxes all render in real time.
+
+<!-- SCREENSHOT: Markdown rendering in editor -->
+
+### 📌 Sticky Notes on HUD
+Pin any note as a floating sticker on your screen. Choose from 6 colors, drag it anywhere, resize it, and toggle transparency. Stickers stay visible while you play.
+
+<!-- SCREENSHOT: Sticky notes on HUD -->
+
+### ✅ Interactive Checkboxes
+Click `[ ]` to check off tasks — works both in the editor and directly on stickers.
+
+<!-- SCREENSHOT: Todo checkboxes -->
+
+### 🌍 Per-world Notes
+Each singleplayer world and multiplayer server has its own separate set of notes. Your base coords stay with your base.
+
+### 🔤 Text Editing
+Full text editing with selection (mouse drag, Shift+arrows, Ctrl+A), clipboard support (Ctrl+C/V/X), undo (Ctrl+Z), and word navigation (Ctrl+arrows).
 
 ---
 
@@ -28,47 +44,50 @@
 | `### Text` | Heading H3 |
 | `---` | Horizontal rule |
 | `> Text` | Blockquote |
-| `` `code` `` | Code block |
+| `` `code` `` | Inline code |
 | `[ ] Text` | Open checkbox |
 | `[x] Text` | Checked checkbox |
 
-Press `?` inside the notepad to create a syntax reference note in-game.
+Press `?` in the notepad to create a built-in syntax reference note.
 
 ---
 
-## Controls
+## Sticky Note Controls
+
+| Action | How |
+|---|---|
+| Pin a note | Click 📌 → pick a color |
+| Move sticker | Drag by the header |
+| Resize sticker | Drag the bottom-right corner |
+| Toggle transparency | Click `O` button on sticker |
+| Change font size | Hover sticker → `Ctrl` + scroll |
+| Scroll content | Hover sticker → scroll |
+| Close sticker | Click `x` button on sticker |
+
+<!-- SCREENSHOT: Sticker controls -->
+
+---
+
+## Keyboard Shortcuts
 
 | Key | Action |
 |---|---|
 | `N` | Open / close notepad |
-| `Escape` | Close notepad |
-| `Ctrl+Z` | Undo last edit |
-| `Ctrl+Backspace` | Delete word to the left |
-| `Ctrl+Delete` | Delete word to the right |
+| `Ctrl+Z` | Undo |
+| `Ctrl+A` | Select all |
+| `Ctrl+V` | Paste |
+| `Ctrl+Backspace` | Delete word left |
 | `Ctrl+←/→` | Jump by word |
-| `Ctrl+Home/End` | Jump to start / end of note |
-| RMB on a note | Context menu (open, rename, delete) |
+| `Shift+←/→/↑/↓` | Extend selection |
+| `Ctrl+Home/End` | Jump to start/end |
+| `RMB` on note | Context menu (open, rename, delete) |
 
 ---
 
-## Installation
+## Localization
 
-Drop the `.jar` into your `mods/` folder — that's it.
-
-- **Fabric:** requires [Fabric API](https://modrinth.com/mod/fabric-api)
-- **NeoForge:** no extra dependencies
-
----
-
-## Compatibility
-
-| | Version |
-|---|---|
-| Minecraft | 1.21.1 |
-| Fabric Loader | ≥ 0.16.9 |
-| NeoForge | 21.1.x |
-| Side | Client only |
-
+Notely includes translations for:
+EN · BY · BY (Łacin) · UA · RU · DE · FR · ES · PT · PL · IT · NL · ZH · ZH-TW · JA · KO
 ---
 
 **Author:** Deokma · **License:** MPL-2.0

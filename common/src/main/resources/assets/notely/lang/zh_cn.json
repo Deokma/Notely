@@ -1,6 +1,6 @@
 {
-  "key.notepad.open": "打开记事本",
-  "key.categories.notepad": "记事本",
+  "key.notely.open": "打开记事本",
+  "key.categories.notely": "记事本",
 
   "notely.button.new_note": "新建笔记",
   "notely.button.pin": "\uD83D\uDCCC",

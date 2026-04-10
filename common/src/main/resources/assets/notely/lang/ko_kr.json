@@ -1,6 +1,6 @@
 {
-  "key.notepad.open": "메모장 열기",
-  "key.categories.notepad": "메모장",
+  "key.notely.open": "메모장 열기",
+  "key.categories.notely": "메모장",
 
   "notely.button.new_note": "새 메모",
   "notely.button.pin": "\uD83D\uDCCC",

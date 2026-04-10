@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class NotepadData {
+public class NotelyData {
 
     public static final int MAX_CONTENT_LENGTH = 4096;
 
@@ -58,8 +58,8 @@ public class NotepadData {
     }
 
     private static class SaveFile {
-        List<Note> notes = NotepadData.notes;
-        List<Sticker> stickers = NotepadData.stickers;
+        List<Note> notes = NotelyData.notes;
+        List<Sticker> stickers = NotelyData.stickers;
     }
 
     // ---- CRUD ----
@@ -100,7 +100,7 @@ public class NotepadData {
             Files.createDirectories(dir);
             Files.writeString(dir.resolve("notes.json"), GSON.toJson(new SaveFile()), StandardCharsets.UTF_8);
         } catch (IOException e) {
-            NotepadMod.LOG.error("Failed to save notepad data", e);
+            NotelyMod.LOG.error("Failed to save notepad data", e);
         }
     }
 
@@ -112,7 +112,7 @@ public class NotepadData {
             if (data.notes != null) { notes.clear(); notes.addAll(data.notes); }
             if (data.stickers != null) { stickers.clear(); stickers.addAll(data.stickers); }
         } catch (Exception e) {
-            NotepadMod.LOG.error("Failed to load notepad data", e);
+            NotelyMod.LOG.error("Failed to load notepad data", e);
         }
     }
 
@@ -128,7 +128,7 @@ public class NotepadData {
         notes.clear();
         stickers.clear();
         load();
-        NotepadMod.LOG.info("Notely: loaded context '{}'", currentContext);
+        NotelyMod.LOG.info("Notely: loaded context '{}'", currentContext);
     }
 
     /** Called on disconnect — saves and resets to global context. */
@@ -138,7 +138,7 @@ public class NotepadData {
         notes.clear();
         stickers.clear();
         load();
-        NotepadMod.LOG.info("Notely: returned to global context");
+        NotelyMod.LOG.info("Notely: returned to global context");
     }
 
     private static Path dataDir() {

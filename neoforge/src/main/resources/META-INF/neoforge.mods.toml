@@ -1,25 +1,25 @@
 modLoader="javafml"
 loaderVersion="[4,)"
-license="MPL-2.0"
+license="${license}"
 
 [[mods]]
-modId="notepad"
-version="1.0.0"
-displayName="Notely"
-description="A client-side notepad mod with Markdown rendering and pinnable sticky notes. Write notes, create todos, and pin them to your HUD without leaving the game."
-authors="Deokma"
+modId="${mod_id}"
+version="${version}"
+displayName="${mod_name}"
+description="${description}"
+authors="${mod_author}"
 logoFile="icon.png"
 
-[[dependencies.notepad]]
+[[dependencies.${mod_id}]]
 modId="neoforge"
 type="required"
-versionRange="[21.1,)"
+versionRange="${neoforge_loader_version_range}"
 ordering="NONE"
 side="BOTH"
 
-[[dependencies.notepad]]
+[[dependencies.${mod_id}]]
 modId="minecraft"
 type="required"
-versionRange="[1.21.1,1.22)"
+versionRange="${minecraft_version_range}"
 ordering="NONE"
 side="BOTH"
