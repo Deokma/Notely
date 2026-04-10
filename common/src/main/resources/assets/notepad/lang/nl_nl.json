@@ -1,0 +1,24 @@
+{
+  "key.notepad.open": "Kladblok openen",
+  "key.categories.notepad": "Kladblok",
+
+  "notely.button.new_note": "Nieuwe notitie",
+  "notely.button.pin": "\uD83D\uDCCC",
+  "notely.button.help": "?",
+  "notely.button.close": "X",
+
+  "notely.list.header": "Notities",
+  "notely.list.pinned_marker": "*",
+
+  "notely.editor.select_note": "Selecteer een notitie links",
+  "notely.editor.start_writing": "Begin met schrijven...",
+  "notely.editor.rename_hint": "Enter \u2014 opslaan",
+  "notely.editor.click_to_rename": " [klik om te hernoemen]",
+
+  "notely.context.open": "Openen",
+  "notely.context.rename": "Hernoemen",
+  "notely.context.delete": "Verwijderen",
+
+  "notely.help.title": "Syntaxishulp",
+  "notely.help.content": "# Kop H1\n## Kop H2\n### Kop H3\n---\n> Citaat\n`Code in tekst`\n---\n[ ] Taak open\n[x] Taak voltooid\n---\nNormale tekst. \uD83D\uDCCC om vast te zetten.\nRMK op een notitie.\nCtrl+Backspace \u2014 woord verwijderen."
+}

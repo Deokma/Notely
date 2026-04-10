@@ -1,0 +1,24 @@
+{
+  "key.notepad.open": "Adkryć natatnik",
+  "key.categories.notepad": "Natatnik",
+
+  "notely.button.new_note": "Novaja natatka",
+  "notely.button.pin": "\uD83D\uDCCC",
+  "notely.button.help": "?",
+  "notely.button.close": "X",
+
+  "notely.list.header": "Natatki",
+  "notely.list.pinned_marker": "*",
+
+  "notely.editor.select_note": "Abiarycie natatku źleva",
+  "notely.editor.start_writing": "Pačniecie pisać...",
+  "notely.editor.rename_hint": "Enter \u2014 zachavać źmieny",
+  "notely.editor.click_to_rename": " [Naciśnicie dla pierajmienavańnia]",
+
+  "notely.context.open": "Adkryć",
+  "notely.context.rename": "Pierajmienavać",
+  "notely.context.delete": "Vydalić",
+
+  "notely.help.title": "Daviedka pa syntaksisie",
+  "notely.help.content": "# Zahałovak H1\n## Zahałovak H2\n### Zahałovak H3\n---\n> Cytata\n`Kod u tekście`\n---\n[ ] Zadača nie vykanana\n[x] Zadača vykanana\n---\nZvyčajny tekst. Naciśnicie \uD83D\uDCCC dla zamacavańnia.\nPKM pa natatcy ŭ mieniu.\nCtrl+Backspace \u2014 vydalić słova całkam."
+}

@@ -1,12 +1,14 @@
 modLoader="javafml"
 loaderVersion="[4,)"
-license="MIT"
+license="MPL-2.0"
 
 [[mods]]
 modId="notepad"
 version="1.0.0"
-displayName="Notepad Mod"
-description="Client-side notepad with sticky notes overlay"
+displayName="Notely"
+description="A client-side notepad mod with Markdown rendering and pinnable sticky notes. Write notes, create todos, and pin them to your HUD without leaving the game."
+authors="Deokma"
+logoFile="icon.png"
 
 [[dependencies.notepad]]
 modId="neoforge"

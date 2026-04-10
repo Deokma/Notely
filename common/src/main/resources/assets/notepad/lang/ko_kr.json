@@ -1,0 +1,24 @@
+{
+  "key.notepad.open": "메모장 열기",
+  "key.categories.notepad": "메모장",
+
+  "notely.button.new_note": "새 메모",
+  "notely.button.pin": "\uD83D\uDCCC",
+  "notely.button.help": "?",
+  "notely.button.close": "X",
+
+  "notely.list.header": "메모",
+  "notely.list.pinned_marker": "*",
+
+  "notely.editor.select_note": "왼쪽에서 메모 선택",
+  "notely.editor.start_writing": "작성 시작...",
+  "notely.editor.rename_hint": "Enter \u2014 저장",
+  "notely.editor.click_to_rename": " [클릭하여 이름 변경]",
+
+  "notely.context.open": "열기",
+  "notely.context.rename": "이름 변경",
+  "notely.context.delete": "삭제",
+
+  "notely.help.title": "문법 도움말",
+  "notely.help.content": "# 제목 H1\n## 제목 H2\n### 제목 H3\n---\n> 인용\n`코드 텍스트`\n---\n[ ] 미완료 작업\n[x] 완료 작업\n---\n일반 텍스트. \uD83D\uDCCC 로 고정.\n메뉴에서 메모 우클릭.\nCtrl+Backspace \u2014 단어 삭제."
+}

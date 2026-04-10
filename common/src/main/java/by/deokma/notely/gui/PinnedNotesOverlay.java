@@ -132,13 +132,7 @@ public class PinnedNotesOverlay {
 
     private static void drawStickerTodo(GuiGraphics gfx, Minecraft mc, Sticker s,
             String line, int x, int ty, int w, int mx, int my, int alpha, int ink, boolean done) {
-        gfx.fill(x + PAD, ty, x + PAD + 7, ty + 7, 0x44000000);
-        if (done) {
-            gfx.fill(x + PAD + 1, ty + 1, x + PAD + 6, ty + 6, (alpha << 24) | 0x004A8A3A);
-            gfx.drawString(mc.font, "x", x + PAD, ty, (alpha << 24) | 0x00FFFFFF, false);
-        } else {
-            gfx.fill(x + PAD + 1, ty + 1, x + PAD + 6, ty + 6, darken(s.color, 1.05f));
-        }
+        MarkdownRenderer.drawCheckbox(gfx, x + PAD, ty, done);
         boolean hov = mx >= x + PAD && mx < x + PAD + 9 && my >= ty && my < ty + 7;
         if (hov) gfx.fill(x + PAD - 1, ty - 1, x + PAD + 8, ty + 8, 0x44FFFFFF);
         String todoText = mc.font.plainSubstrByWidth(line.substring(4), w - PAD * 2 - 10);

@@ -1,0 +1,24 @@
+{
+  "key.notepad.open": "Notizbuch öffnen",
+  "key.categories.notepad": "Notizbuch",
+
+  "notely.button.new_note": "Neue Notiz",
+  "notely.button.pin": "\uD83D\uDCCC",
+  "notely.button.help": "?",
+  "notely.button.close": "X",
+
+  "notely.list.header": "Notizen",
+  "notely.list.pinned_marker": "*",
+
+  "notely.editor.select_note": "Notiz links auswählen",
+  "notely.editor.start_writing": "Schreiben beginnen...",
+  "notely.editor.rename_hint": "Enter \u2014 speichern",
+  "notely.editor.click_to_rename": " [zum Umbenennen klicken]",
+
+  "notely.context.open": "Öffnen",
+  "notely.context.rename": "Umbenennen",
+  "notely.context.delete": "Löschen",
+
+  "notely.help.title": "Syntax-Hilfe",
+  "notely.help.content": "# Überschrift H1\n## Überschrift H2\n### Überschrift H3\n---\n> Zitat\n`Code im Text`\n---\n[ ] Aufgabe offen\n[x] Aufgabe erledigt\n---\nNormaler Text. \uD83D\uDCCC zum Anheften.\nRMT auf Notiz im Menü.\nStrg+Rücktaste \u2014 Wort löschen."
+}

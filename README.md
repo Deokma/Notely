@@ -1,22 +1,21 @@
-# Notely — Notepad Mod
+# Notely
 
-A client-side Minecraft mod that adds an in-game notepad with Markdown rendering and pinnable sticky notes.
-
-Supports **Fabric** and **NeoForge** on Minecraft **1.21.1**.
+**Notely** is a client-side notepad mod for Minecraft with Markdown rendering and pinnable sticky notes on your HUD.
 
 ---
 
 ## Features
 
-- **In-game notepad** — open with `N` (rebindable), write notes without leaving the game
-- **Markdown rendering** — headings, quotes, code, horizontal rules, todo checkboxes
-- **Pinnable sticky notes** — pin any note as a floating overlay on your HUD, pick a color
-- **Drag & resize** stickers directly on screen
-- **Transparency toggle** on each sticker
-- **Todo checkboxes** — click `[ ]` to check/uncheck both in the editor and on stickers
-- **Undo** — `Ctrl+Z` to revert edits
-- **Context menu** — right-click a note in the list to open, rename, or delete
-- **Persistent storage** — notes saved to `<gamedir>/notepad/notes.json`
+- 📝 **In-game notepad** — open with `N` (rebindable in controls)
+- ✨ **Markdown rendering** — headings, quotes, code blocks, dividers, checkboxes
+- 📌 **HUD sticky notes** — pin any note as a floating sticker over the game
+- 🎨 **6 sticker colors** to choose from
+- 🔲 **Todo checkboxes** — clickable both in the editor and on stickers
+- 🔄 **Undo** — `Ctrl+Z` to revert edits
+- 🖱️ **Drag & resize** stickers with your mouse
+- 👁️ **Transparency toggle** per sticker
+- 🌍 **Localization** — EN, BE, UA, RU, DE, FR, ES, PT, PL, IT, NL, ZH, JA, KO and more
+- 💾 **Auto-save** to `notepad/notes.json` in your game folder
 
 ---
 
@@ -24,16 +23,16 @@ Supports **Fabric** and **NeoForge** on Minecraft **1.21.1**.
 
 | Syntax | Result |
 |---|---|
-| `# Heading` | H1 — large heading with underline |
-| `## Heading` | H2 |
-| `### Heading` | H3 |
+| `# Text` | Heading H1 |
+| `## Text` | Heading H2 |
+| `### Text` | Heading H3 |
 | `---` | Horizontal rule |
-| `> text` | Blockquote |
-| `` `code` `` | Inline code block |
-| `[ ] text` | Open todo checkbox |
-| `[x] text` | Checked todo checkbox |
+| `> Text` | Blockquote |
+| `` `code` `` | Code block |
+| `[ ] Text` | Open checkbox |
+| `[x] Text` | Checked checkbox |
 
-Press `?` in the notepad to create a built-in syntax reference note.
+Press `?` inside the notepad to create a syntax reference note in-game.
 
 ---
 
@@ -41,73 +40,35 @@ Press `?` in the notepad to create a built-in syntax reference note.
 
 | Key | Action |
 |---|---|
-| `N` | Open / close notepad (rebindable) |
+| `N` | Open / close notepad |
 | `Escape` | Close notepad |
 | `Ctrl+Z` | Undo last edit |
 | `Ctrl+Backspace` | Delete word to the left |
 | `Ctrl+Delete` | Delete word to the right |
-| `Ctrl+Left / Right` | Jump by word |
-| `Ctrl+Home / End` | Jump to start / end of note |
-| `Home / End` | Jump to start / end of line |
-| `↑ / ↓` | Move cursor up / down |
+| `Ctrl+←/→` | Jump by word |
+| `Ctrl+Home/End` | Jump to start / end of note |
+| RMB on a note | Context menu (open, rename, delete) |
 
 ---
 
 ## Installation
 
-### Fabric
-1. Install [Fabric Loader](https://fabricmc.net/use/) `>=0.16.9`
-2. Install [Fabric API](https://modrinth.com/mod/fabric-api) `0.110.0+1.21.1`
-3. Drop the mod jar into your `mods/` folder
+Drop the `.jar` into your `mods/` folder — that's it.
 
-### NeoForge
-1. Install [NeoForge](https://neoforged.net/) `21.1.86`
-2. Drop the mod jar into your `mods/` folder
+- **Fabric:** requires [Fabric API](https://modrinth.com/mod/fabric-api)
+- **NeoForge:** no extra dependencies
 
 ---
 
-## Building from Source
+## Compatibility
 
-Requirements: **JDK 21**, internet connection (Gradle downloads dependencies automatically).
-
-```bash
-# Clone
-git clone https://github.com/yourname/notely.git
-cd notely
-
-# Build Fabric jar
-./gradlew :fabric:build
-
-# Build NeoForge jar
-./gradlew :neoforge:build
-```
-
-Output jars are in `fabric/build/libs/` and `neoforge/build/libs/`.
-
-> **Note:** If you get `Error: could not open clientRunVmArgs.txt` when running from IntelliJ,
-> run the Gradle task `:neoforge:createRunFiles` once to generate the dev run configuration.
+| | Version |
+|---|---|
+| Minecraft | 1.21.1 |
+| Fabric Loader | ≥ 0.16.9 |
+| NeoForge | 21.1.x |
+| Side | Client only |
 
 ---
 
-## Project Structure
-
-```
-common/          Shared code (GUI, data, utilities)
-  gui/
-    NotepadScreen.java        Main notepad screen
-    PinnedNotesOverlay.java   HUD sticky notes overlay
-  util/
-    MarkdownRenderer.java     MD parsing + rendering (shared)
-    TextCursor.java           Cursor navigation helpers
-  NotepadData.java            Data model + JSON persistence
-  NotepadModClient.java       Client init, keybind, mouse hooks
-
-fabric/          Fabric platform entrypoints
-neoforge/        NeoForge platform entrypoints
-```
-
----
-
-## License
-
-MIT
+**Author:** Deokma · **License:** MPL-2.0

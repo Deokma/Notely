@@ -1,0 +1,24 @@
+{
+  "key.notepad.open": "Abrir bloc de notas",
+  "key.categories.notepad": "Bloc de notas",
+
+  "notely.button.new_note": "Nueva nota",
+  "notely.button.pin": "\uD83D\uDCCC",
+  "notely.button.help": "?",
+  "notely.button.close": "X",
+
+  "notely.list.header": "Notas",
+  "notely.list.pinned_marker": "*",
+
+  "notely.editor.select_note": "Selecciona una nota a la izquierda",
+  "notely.editor.start_writing": "Empieza a escribir...",
+  "notely.editor.rename_hint": "Enter \u2014 guardar",
+  "notely.editor.click_to_rename": " [clic para renombrar]",
+
+  "notely.context.open": "Abrir",
+  "notely.context.rename": "Renombrar",
+  "notely.context.delete": "Eliminar",
+
+  "notely.help.title": "Ayuda de sintaxis",
+  "notely.help.content": "# Encabezado H1\n## Encabezado H2\n### Encabezado H3\n---\n> Cita\n`Código en texto`\n---\n[ ] Tarea pendiente\n[x] Tarea completada\n---\nTexto normal. \uD83D\uDCCC para fijar.\nClic derecho en una nota.\nCtrl+Retroceso \u2014 borrar palabra."
+}

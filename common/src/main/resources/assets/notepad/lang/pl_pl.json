@@ -1,0 +1,24 @@
+{
+  "key.notepad.open": "Otwórz notatnik",
+  "key.categories.notepad": "Notatnik",
+
+  "notely.button.new_note": "Nowa notatka",
+  "notely.button.pin": "\uD83D\uDCCC",
+  "notely.button.help": "?",
+  "notely.button.close": "X",
+
+  "notely.list.header": "Notatki",
+  "notely.list.pinned_marker": "*",
+
+  "notely.editor.select_note": "Wybierz notatkę po lewej",
+  "notely.editor.start_writing": "Zacznij pisać...",
+  "notely.editor.rename_hint": "Enter \u2014 zapisz",
+  "notely.editor.click_to_rename": " [kliknij, aby zmienić nazwę]",
+
+  "notely.context.open": "Otwórz",
+  "notely.context.rename": "Zmień nazwę",
+  "notely.context.delete": "Usuń",
+
+  "notely.help.title": "Pomoc składni",
+  "notely.help.content": "# Nagłówek H1\n## Nagłówek H2\n### Nagłówek H3\n---\n> Cytat\n`Kod w tekście`\n---\n[ ] Zadanie do zrobienia\n[x] Zadanie wykonane\n---\nZwykły tekst. \uD83D\uDCCC aby przypiąć.\nPPM na notatkę w menu.\nCtrl+Backspace \u2014 usuń słowo."
+}

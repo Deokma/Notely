@@ -85,7 +85,11 @@ public class NotepadScreen extends Screen {
     private Button btnAdd, btnPin, btnClose, btnHelp;
     private final List<Button> colorBtns = new ArrayList<>();
 
-    // ---- GLFW modifier masks ----
+    // ---- Textures ----
+    private static final ResourceLocation TEX_NOTEPAD = ResourceLocation.fromNamespaceAndPath("notepad", "textures/gui/notepad.png");
+    private static final ResourceLocation TEX_ICON    = ResourceLocation.fromNamespaceAndPath("notepad", "textures/icon.png");
+
+
     private static final int MOD_CTRL  = 2;
     private static final int MOD_SHIFT = 1;
 
@@ -127,7 +131,7 @@ public class NotepadScreen extends Screen {
 
         btnPin = addRenderableWidget(Button.builder(
             Component.translatable("notely.button.pin"), b -> toggleColorPicker()
-        ).pos(ox + W - 34, toolY).size(14, 13).build());
+        ).pos(ox + W - 34, toolY - 1).size(14, 13).build());
 
         btnHelp = addRenderableWidget(Button.builder(
             Component.translatable("notely.button.help"), b -> createHelpNote()
@@ -135,7 +139,7 @@ public class NotepadScreen extends Screen {
 
         btnClose = addRenderableWidget(Button.builder(
             Component.translatable("notely.button.close"), b -> onClose()
-        ).pos(ox + W - 18, toolY).size(15, 13).build());
+        ).pos(ox + W - 18, toolY - 1).size(15, 13).build());
 
         for (int i = 0; i < STICKER_COLORS.length; i++) {
             final int ci = i;
@@ -153,6 +157,8 @@ public class NotepadScreen extends Screen {
         boolean has = selected != null;
         btnPin.active = has;
         colorBtns.forEach(b -> b.visible = pickingColor && has);
+        // Remove button focus so space doesn't trigger them while editing
+        if (has && !renamingTitle) setFocused(null);
     }
 
     // =========================================================
@@ -161,6 +167,7 @@ public class NotepadScreen extends Screen {
 
     private void newNote() {
         Note n = NotepadData.createNote();
+        n.title = Component.translatable("notely.button.new_note").getString();
         selected = n;
         cursor = 0;
         textOffset = 0;
@@ -260,11 +267,6 @@ public class NotepadScreen extends Screen {
     @Override
     public boolean keyPressed(int key, int scan, int mods) {
         if (key == GLFW.GLFW_KEY_ESCAPE) { onClose(); return true; }
-
-        // Space goes to text, not focused button
-        if (key == GLFW.GLFW_KEY_SPACE && !renamingTitle && selected != null) {
-            typeChar(' '); return true;
-        }
 
         if (renamingTitle) return handleTitleKey(key);
         if (selected == null) return super.keyPressed(key, scan, mods);
@@ -509,41 +511,21 @@ public class NotepadScreen extends Screen {
 
     private void drawFrame(GuiGraphics g) {
         int x = ox, y = oy;
-        g.fill(x + 4, y + 4, x + W + 4, y + H + 4, COL_SHADOW);
-        g.fill(x, y, x + W, y + H, COL_BG);
-        g.fill(x, y, x + LIST_W, y + H, COL_LIST);
-        g.fill(x + LIST_W, y, x + LIST_W + 1, y + H, COL_BORDER);
 
-        // Torn top edge
-        for (int col = 0; col < W; col += 4) {
-            int t = tornTop[Math.min(col / 4, tornTop.length - 1)];
-            g.fill(x + col, y, x + col + 4, y + t, 0xFF1E1E1E);
-            g.fill(x + col, y + t, x + col + 4, y + t + 2, COL_TORN);
-        }
-        // Torn bottom edge
-        for (int col = 0; col < W; col += 4) {
-            int t = tornBot[Math.min(col / 4, tornBot.length - 1)];
-            int base = y + H - TORN;
-            g.fill(x + col, base + t, x + col + 4, y + H, 0xFF1E1E1E);
-            g.fill(x + col, base + t - 1, x + col + 4, base + t + 1, COL_TORN);
-        }
+        // Background texture (stretched to W x H)
+        g.blit(TEX_NOTEPAD, x, y, 0, 0, W, H, 512, 512);
 
         // Toolbar strip
         g.fill(x + LIST_W + 1, y + TORN, x + W, y + TORN + 17, COL_TOOLBAR);
-        g.fill(x + LIST_W + 1, y + TORN + 16, x + W, y + TORN + 17, COL_BORDER);
 
-        // Binding holes
-        for (int i = 0; i < 3; i++) {
-            int hy = y + 30 + i * 75;
-            g.fill(x + LIST_W + 3, hy, x + LIST_W + 12, hy + 8, 0xFF111111);
-            g.fill(x + LIST_W + 4, hy + 1, x + LIST_W + 11, hy + 7, 0xFF000000);
-            g.fill(x + LIST_W + 4, hy + 1, x + LIST_W + 7, hy + 3, 0x22FFFFFF);
-        }
+        // Icon in toolbar (16x16) - removed, icon is for mod metadata only
 
-        // Red margin line + ruled lines
+        // Binding holes are part of the background texture
+
+        // Ruled lines
         int mx2 = ox + LIST_W + 22;
-        g.fill(mx2, oy + TORN + 17, mx2 + 1, oy + H - TORN - 20, COL_RED_MARGIN);
-        int ruledY = oy + TORN + 34 + LINE_H;
+        int contentY = oy + TORN + 32;
+        int ruledY = contentY + LINE_H - 1;
         while (ruledY < oy + H - TORN - 20) {
             g.fill(mx2 - 1, ruledY, ox + W - 8, ruledY + 1, COL_RULE);
             ruledY += LINE_H;
@@ -588,10 +570,10 @@ public class NotepadScreen extends Screen {
     }
 
     private void drawEditor(GuiGraphics g) {
-        int ex = ox + LIST_W + 22;
+        int ex = ox + LIST_W + 24; // +2px indent from red margin line
         int titleY = oy + TORN + 18;
-        int contentY = titleY + 14;
-        int clipTop = contentY - 2, clipBot = oy + H - TORN - 20;
+        int contentY = titleY + 16;
+        int clipTop = contentY , clipBot = oy + H - TORN - 20;
 
         if (selected == null) {
             g.drawString(font, Component.translatable("notely.editor.select_note").getString(), ex, contentY + 20, MarkdownRenderer.COL_HINT, false);
@@ -636,12 +618,20 @@ public class NotepadScreen extends Screen {
         int ci = 0;
         int maxW = editorMaxW();
 
+        // Find which logical line index the cursor is on (for raw-text preview)
+        int cursorLi = TextCursor.cursorLineIndex(text, cursor);
+
         outer:
         for (int li = 0; li < rawLines.length; li++) {
             String raw = rawLines[li];
             LineType type = MarkdownRenderer.detectLineType(raw);
-            String display = MarkdownRenderer.getDisplayText(raw, type);
-            int xOff = MarkdownRenderer.getTextXOffset(type);
+            boolean cursorOnThisLine = (li == cursorLi) && !renamingTitle;
+
+            // Obsidian mode: show raw text when cursor is on this line
+            String display = cursorOnThisLine ? raw : MarkdownRenderer.getDisplayText(raw, type);
+            LineType renderType = cursorOnThisLine ? LineType.NORMAL : type;
+            int xOff = cursorOnThisLine ? 0 : MarkdownRenderer.getTextXOffset(type);
+
             List<String> wrapped = MarkdownRenderer.wrapLine(font, display, maxW - xOff);
             if (wrapped.isEmpty()) wrapped.add("");
 
@@ -652,12 +642,17 @@ public class NotepadScreen extends Screen {
 
                 if (dy >= clipTop - LINE_H && dy <= clipBot) {
                     renderedLines.add(new RenderedLine(segCharStart, segCharEnd, dy, type, raw));
-                    MarkdownRenderer.drawLine(g, font, seg, ex + xOff, dy, type, maxW);
+                    if (cursorOnThisLine) {
+                        // Subtle highlight on active line
+                        g.fill(ex - 2, dy - 1, ex + maxW, dy + LINE_H, 0x18000000);
+                    }
+                    MarkdownRenderer.drawLine(g, font, seg, ex + xOff, dy, renderType, maxW);
                 }
 
                 // Draw cursor
                 if (!renamingTitle && cursorVisible && cursor >= ci && cursor <= ci + raw.length()) {
-                    int posInDisplay = Math.max(0, cursor - ci - MarkdownRenderer.prefixLen(type));
+                    int prefixOffset = cursorOnThisLine ? 0 : MarkdownRenderer.prefixLen(type);
+                    int posInDisplay = Math.max(0, cursor - ci - prefixOffset);
                     if (posInDisplay <= display.length() && dy >= clipTop && dy <= clipBot) {
                         String beforeCursor = font.plainSubstrByWidth(display.substring(0, posInDisplay), maxW);
                         int cx = ex + xOff + font.width(beforeCursor);

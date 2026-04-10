@@ -1,0 +1,24 @@
+{
+  "key.notepad.open": "Адкрыць нататнік",
+  "key.categories.notepad": "Нататнік",
+
+  "notely.button.new_note": "Новая нататка",
+  "notely.button.pin": "\uD83D\uDCCC",
+  "notely.button.help": "?",
+  "notely.button.close": "X",
+
+  "notely.list.header": "Нататкі",
+  "notely.list.pinned_marker": "*",
+
+  "notely.editor.select_note": "Абярыце нататку злева",
+  "notely.editor.start_writing": "Пачніце пісаць...",
+  "notely.editor.rename_hint": "Enter \u2014 захаваць змены",
+  "notely.editor.click_to_rename": " [Націсніце для перайменавання]",
+
+  "notely.context.open": "Адкрыць",
+  "notely.context.rename": "Перайменаваць",
+  "notely.context.delete": "Выдаліць",
+
+  "notely.help.title": "Даведка па сінтаксісе",
+  "notely.help.content": "# Загаловак H1\n## Загаловак H2\n### Загаловак H3\n---\n> Цытата\n`Код у тэксце`\n---\n[ ] Задача не выканана\n[x] Задача выканана\n---\nЗвычайны тэкст. Націсніце \uD83D\uDCCC для замацавання.\nПКМ па нататцы ў меню.\nCtrl+Backspace \u2014 выдаліць слова цалкам."
+}

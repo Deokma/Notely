@@ -2,10 +2,11 @@
   "schemaVersion": 1,
   "id": "notepad",
   "version": "1.0.0",
-  "name": "Notepad Mod",
-  "description": "Client-side notepad with sticky notes overlay",
-  "authors": ["YourName"],
-  "license": "MIT",
+  "name": "Notely",
+  "description": "A client-side notepad mod with Markdown rendering and pinnable sticky notes. Write notes, create todos, and pin them to your HUD without leaving the game.",
+  "authors": ["Deokma"],
+  "license": "MPL-2.0",
+  "icon": "assets/notepad/textures/icon.png",
   "environment": "client",
   "entrypoints": {
     "main": [

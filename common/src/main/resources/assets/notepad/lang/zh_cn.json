@@ -1,0 +1,24 @@
+{
+  "key.notepad.open": "打开记事本",
+  "key.categories.notepad": "记事本",
+
+  "notely.button.new_note": "新建笔记",
+  "notely.button.pin": "\uD83D\uDCCC",
+  "notely.button.help": "?",
+  "notely.button.close": "X",
+
+  "notely.list.header": "笔记",
+  "notely.list.pinned_marker": "*",
+
+  "notely.editor.select_note": "在左侧选择笔记",
+  "notely.editor.start_writing": "开始写作...",
+  "notely.editor.rename_hint": "Enter \u2014 保存",
+  "notely.editor.click_to_rename": " [点击重命名]",
+
+  "notely.context.open": "打开",
+  "notely.context.rename": "重命名",
+  "notely.context.delete": "删除",
+
+  "notely.help.title": "语法帮助",
+  "notely.help.content": "# 标题 H1\n## 标题 H2\n### 标题 H3\n---\n> 引用\n`代码文本`\n---\n[ ] 未完成任务\n[x] 已完成任务\n---\n普通文本。点击 \uD83D\uDCCC 固定。\n右键菜单中的笔记。\nCtrl+Backspace \u2014 删除单词。"
+}

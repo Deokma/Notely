@@ -1,0 +1,24 @@
+{
+  "key.notepad.open": "開啟記事本",
+  "key.categories.notepad": "記事本",
+
+  "notely.button.new_note": "新增筆記",
+  "notely.button.pin": "\uD83D\uDCCC",
+  "notely.button.help": "?",
+  "notely.button.close": "X",
+
+  "notely.list.header": "筆記",
+  "notely.list.pinned_marker": "*",
+
+  "notely.editor.select_note": "在左側選擇筆記",
+  "notely.editor.start_writing": "開始書寫...",
+  "notely.editor.rename_hint": "Enter \u2014 儲存",
+  "notely.editor.click_to_rename": " [點擊以重新命名]",
+
+  "notely.context.open": "開啟",
+  "notely.context.rename": "重新命名",
+  "notely.context.delete": "刪除",
+
+  "notely.help.title": "語法說明",
+  "notely.help.content": "# 標題 H1\n## 標題 H2\n### 標題 H3\n---\n> 引用\n`程式碼文字`\n---\n[ ] 未完成任務\n[x] 已完成任務\n---\n一般文字。點擊 \uD83D\uDCCC 固定。\n在選單中右鍵點擊筆記。\nCtrl+Backspace \u2014 刪除單字。"
+}
