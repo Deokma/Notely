@@ -6,8 +6,10 @@ import by.deokma.notely.gui.NotepadScreen;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ServerData;
 import org.lwjgl.glfw.GLFW;
 
 public class NotepadModFabricClient implements ClientModInitializer {
@@ -19,7 +21,42 @@ public class NotepadModFabricClient implements ClientModInitializer {
         NotepadModClient.init();
         KeyBindingHelper.registerKeyBinding(NotepadModClient.createKeyMapping());
 
+        // World/server context switching
+        ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> {
+            ServerData server = mc.getCurrentServer();
+            if (server != null) {
+                NotepadModClient.onJoinServer(server.ip);
+            } else if (mc.getSingleplayerServer() != null) {
+                String folderName;
+                try {
+                    var field = mc.getSingleplayerServer().getClass().getSuperclass().getDeclaredField("storageSource");
+                    field.setAccessible(true);
+                    var storage = field.get(mc.getSingleplayerServer());
+                    folderName = (String) storage.getClass().getMethod("getLevelId").invoke(storage);
+                } catch (Exception e) {
+                    folderName = mc.getSingleplayerServer().getWorldData().getLevelName();
+                }
+                NotepadModClient.onJoinWorld(folderName);
+            }
+        });
+
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) ->
+            NotepadModClient.onLeave()
+        );
+
         ClientTickEvents.END_CLIENT_TICK.register(mc -> NotepadModClient.onKeyTick());
+
+        // Init GLFW scroll callback once window is ready (first tick)
+        ClientTickEvents.START_CLIENT_TICK.register(new ClientTickEvents.StartTick() {
+            private boolean initialized = false;
+            @Override
+            public void onStartTick(Minecraft mc) {
+                if (!initialized && mc.getWindow() != null) {
+                    NotepadModClient.initWindow();
+                    initialized = true;
+                }
+            }
+        });
 
         HudRenderCallback.EVENT.register((gfx, tickDelta) -> {
             Minecraft mc = Minecraft.getInstance();

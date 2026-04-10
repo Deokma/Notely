@@ -14,6 +14,9 @@
     ],
     "client": [
       "by.deokma.notely.fabric.NotepadModFabricClient"
+    ],
+    "modmenu": [
+      "by.deokma.notely.fabric.NotepadModMenuEntrypoint"
     ]
   },
   "mixins": [],
@@ -22,5 +25,8 @@
     "minecraft": "~1.21.1",
     "java": ">=21",
     "fabric-api": "*"
+  },
+  "suggests": {
+    "modmenu": ">=11.0.0"
   }
 }

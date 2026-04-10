@@ -7,3 +7,8 @@
 /fabric/build/
 /neoforge/build/
 /neoforge/run/
+/buildSrc/build/
+/buildSrc/.gradle/
+/fabric/runs/
+/forge/build/
+/fabric/run/

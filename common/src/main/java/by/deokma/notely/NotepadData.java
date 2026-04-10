@@ -21,6 +21,11 @@ public class NotepadData {
     public static final List<Note> notes = new ArrayList<>();
     public static final List<Sticker> stickers = new ArrayList<>();
 
+    /** Current context key: world folder name or server address. Null = global fallback. */
+    private static String currentContext = null;
+
+    // ---- Data classes ----
+
     public static class Note {
         public String id;
         public String title;
@@ -38,7 +43,9 @@ public class NotepadData {
         public float x, y;
         public float width, height;
         public int color;
-        public boolean transparent = false; // полупрозрачный режим
+        public boolean transparent = false;
+        public int scrollOffset = 0;
+        public float fontSize = 1.0f; // scale factor: 0.5 – 2.0
 
         public Sticker(String noteId, float x, float y, int color) {
             this.noteId = noteId;
@@ -49,6 +56,13 @@ public class NotepadData {
             this.color = color;
         }
     }
+
+    private static class SaveFile {
+        List<Note> notes = NotepadData.notes;
+        List<Sticker> stickers = NotepadData.stickers;
+    }
+
+    // ---- CRUD ----
 
     public static Note createNote() {
         Note note = new Note();
@@ -78,6 +92,8 @@ public class NotepadData {
         save();
     }
 
+    // ---- Persistence ----
+
     public static void save() {
         try {
             Path dir = dataDir();
@@ -100,12 +116,38 @@ public class NotepadData {
         }
     }
 
-    private static Path dataDir() {
-        return Minecraft.getInstance().gameDirectory.toPath().resolve("notepad");
+    // ---- Context (per-world/server notes) ----
+
+    /**
+     * Switch context to a specific world or server, saving current data first.
+     * @param contextKey sanitized folder name: world name or "server_&lt;address&gt;"
+     */
+    public static void loadForContext(String contextKey) {
+        save();
+        currentContext = sanitize(contextKey);
+        notes.clear();
+        stickers.clear();
+        load();
+        NotepadMod.LOG.info("Notely: loaded context '{}'", currentContext);
     }
 
-    private static class SaveFile {
-        List<Note> notes = NotepadData.notes;
-        List<Sticker> stickers = NotepadData.stickers;
+    /** Called on disconnect — saves and resets to global context. */
+    public static void clearContext() {
+        save();
+        currentContext = null;
+        notes.clear();
+        stickers.clear();
+        load();
+        NotepadMod.LOG.info("Notely: returned to global context");
+    }
+
+    private static Path dataDir() {
+        Path base = Minecraft.getInstance().gameDirectory.toPath().resolve("notepad");
+        if (currentContext != null) return base.resolve(currentContext);
+        return base;
+    }
+
+    private static String sanitize(String name) {
+        return name.replaceAll("[^a-zA-Z0-9._\\-]", "_");
     }
 }

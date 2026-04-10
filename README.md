@@ -14,7 +14,7 @@
 - 🔄 **Undo** — `Ctrl+Z` to revert edits
 - 🖱️ **Drag & resize** stickers with your mouse
 - 👁️ **Transparency toggle** per sticker
-- 🌍 **Localization** — EN, BE, UA, RU, DE, FR, ES, PT, PL, IT, NL, ZH, JA, KO and more
+- 🌍 **Localization** — EN, BY, UA, RU, DE, FR, ES, PT, PL, IT, NL, ZH, JA, KO and more
 - 💾 **Auto-save** to `notepad/notes.json` in your game folder
 
 ---

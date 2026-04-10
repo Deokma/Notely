@@ -58,6 +58,7 @@ public class NotepadScreen extends Screen {
 
     // ---- Cursor ----
     private int cursor = 0;
+    private int selectionStart = -1; // -1 = no selection
     private int cursorTimer = 0;
     private boolean cursorVisible = true;
 
@@ -65,6 +66,11 @@ public class NotepadScreen extends Screen {
     private boolean renamingTitle = false;
     private String titleBuffer = "";
     private int titleCursor = 0;
+    private int titleSelStart = -1; // -1 = no selection
+
+    // ---- Mouse drag selection ----
+    private boolean draggingContent = false;
+    private boolean draggingTitle   = false;
 
     // ---- Color picker ----
     private boolean pickingColor = false;
@@ -76,6 +82,9 @@ public class NotepadScreen extends Screen {
     // ---- Undo ----
     private final ArrayDeque<String> undoStack = new ArrayDeque<>();
     private static final int MAX_UNDO = 50;
+
+    // ---- Title undo ----
+    private final ArrayDeque<String> titleUndoStack = new ArrayDeque<>();
 
     // ---- Rendered lines cache (rebuilt each frame) ----
     private record RenderedLine(int charStart, int charEnd, int screenY, LineType type, String raw) {}
@@ -268,16 +277,20 @@ public class NotepadScreen extends Screen {
     public boolean keyPressed(int key, int scan, int mods) {
         if (key == GLFW.GLFW_KEY_ESCAPE) { onClose(); return true; }
 
-        if (renamingTitle) return handleTitleKey(key);
+        if (renamingTitle) return handleTitleKey(key, mods);
         if (selected == null) return super.keyPressed(key, scan, mods);
 
         String t = selected.content;
-        boolean ctrl = (mods & MOD_CTRL) != 0;
+        boolean ctrl  = (mods & MOD_CTRL)  != 0;
+        boolean shift = (mods & MOD_SHIFT) != 0;
 
         if (ctrl && key == GLFW.GLFW_KEY_Z) { undo(); return true; }
+        if (ctrl && key == GLFW.GLFW_KEY_V) { pasteFromClipboard(); return true; }
+        if (ctrl && key == GLFW.GLFW_KEY_A) { selectionStart = 0; cursor = t.length(); return true; }
 
         switch (key) {
             case GLFW.GLFW_KEY_BACKSPACE -> {
+                if (hasSelection()) { deleteSelection(); return true; }
                 pushUndo();
                 if (ctrl) {
                     int p = TextCursor.wordBoundaryLeft(t, cursor);
@@ -290,6 +303,7 @@ public class NotepadScreen extends Screen {
                 return true;
             }
             case GLFW.GLFW_KEY_DELETE -> {
+                if (hasSelection()) { deleteSelection(); return true; }
                 pushUndo();
                 if (ctrl) {
                     int p = TextCursor.wordBoundaryRight(t, cursor);
@@ -299,40 +313,105 @@ public class NotepadScreen extends Screen {
                 }
                 return true;
             }
-            case GLFW.GLFW_KEY_LEFT  -> { cursor = ctrl ? TextCursor.wordBoundaryLeft(t, cursor)  : Math.max(0, cursor - 1);          return true; }
-            case GLFW.GLFW_KEY_RIGHT -> { cursor = ctrl ? TextCursor.wordBoundaryRight(t, cursor) : Math.min(t.length(), cursor + 1); return true; }
-            case GLFW.GLFW_KEY_UP    -> { cursor = TextCursor.moveVertically(t, cursor, -1); return true; }
-            case GLFW.GLFW_KEY_DOWN  -> { cursor = TextCursor.moveVertically(t, cursor,  1); return true; }
-            case GLFW.GLFW_KEY_HOME  -> { cursor = ctrl ? 0          : TextCursor.lineStart(t, cursor); return true; }
-            case GLFW.GLFW_KEY_END   -> { cursor = ctrl ? t.length() : TextCursor.lineEnd(t, cursor);   return true; }
+            case GLFW.GLFW_KEY_LEFT -> {
+                if (!shift && hasSelection()) { cursor = selMin(); selectionStart = -1; }
+                else { if (shift && !hasSelection()) selectionStart = cursor; cursor = ctrl ? TextCursor.wordBoundaryLeft(t, cursor) : Math.max(0, cursor - 1); if (shift && cursor == selectionStart) selectionStart = -1; }
+                return true;
+            }
+            case GLFW.GLFW_KEY_RIGHT -> {
+                if (!shift && hasSelection()) { cursor = selMax(); selectionStart = -1; }
+                else { if (shift && !hasSelection()) selectionStart = cursor; cursor = ctrl ? TextCursor.wordBoundaryRight(t, cursor) : Math.min(t.length(), cursor + 1); if (shift && cursor == selectionStart) selectionStart = -1; }
+                return true;
+            }
+            case GLFW.GLFW_KEY_UP    -> { if (shift && !hasSelection()) selectionStart = cursor; cursor = TextCursor.moveVertically(t, cursor, -1); if (!shift) selectionStart = -1; return true; }
+            case GLFW.GLFW_KEY_DOWN  -> { if (shift && !hasSelection()) selectionStart = cursor; cursor = TextCursor.moveVertically(t, cursor,  1); if (!shift) selectionStart = -1; return true; }
+            case GLFW.GLFW_KEY_HOME  -> { if (shift && !hasSelection()) selectionStart = cursor; cursor = ctrl ? 0          : TextCursor.lineStart(t, cursor); if (!shift) selectionStart = -1; return true; }
+            case GLFW.GLFW_KEY_END   -> { if (shift && !hasSelection()) selectionStart = cursor; cursor = ctrl ? t.length() : TextCursor.lineEnd(t, cursor);   if (!shift) selectionStart = -1; return true; }
             case GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> { typeChar('\n'); return true; }
             case GLFW.GLFW_KEY_TAB                            -> { typeChar('\t'); return true; }
         }
         return super.keyPressed(key, scan, mods);
     }
 
-    private boolean handleTitleKey(int key) {
+    private boolean handleTitleKey(int key, int mods) {
+        boolean ctrl  = (mods & MOD_CTRL)  != 0;
+        boolean shift = (mods & MOD_SHIFT) != 0;
         switch (key) {
             case GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER -> { commitRename(); return true; }
+            case GLFW.GLFW_KEY_ESCAPE -> { commitRename(); return true; }
             case GLFW.GLFW_KEY_BACKSPACE -> {
-                if (titleCursor > 0) {
+                if (titleHasSel()) { pushTitleUndo(); titleDeleteSel(); return true; }
+                if (ctrl) {
+                    pushTitleUndo();
+                    int p = TextCursor.wordBoundaryLeft(titleBuffer, titleCursor);
+                    titleBuffer = titleBuffer.substring(0, p) + titleBuffer.substring(titleCursor);
+                    titleCursor = p;
+                } else if (titleCursor > 0) {
+                    pushTitleUndo();
                     titleBuffer = titleBuffer.substring(0, titleCursor - 1) + titleBuffer.substring(titleCursor);
                     titleCursor--;
                 }
                 return true;
             }
-            case GLFW.GLFW_KEY_LEFT  -> { titleCursor = Math.max(0, titleCursor - 1); return true; }
-            case GLFW.GLFW_KEY_RIGHT -> { titleCursor = Math.min(titleBuffer.length(), titleCursor + 1); return true; }
+            case GLFW.GLFW_KEY_DELETE -> {
+                if (titleHasSel()) { pushTitleUndo(); titleDeleteSel(); return true; }
+                if (titleCursor < titleBuffer.length()) {
+                    pushTitleUndo();
+                    titleBuffer = titleBuffer.substring(0, titleCursor) + titleBuffer.substring(titleCursor + 1);
+                }
+                return true;
+            }
+            case GLFW.GLFW_KEY_LEFT -> {
+                if (!shift && titleHasSel()) { titleCursor = titleSelMin(); titleSelStart = -1; }
+                else { if (shift && !titleHasSel()) titleSelStart = titleCursor; titleCursor = ctrl ? TextCursor.wordBoundaryLeft(titleBuffer, titleCursor) : Math.max(0, titleCursor - 1); if (shift && titleCursor == titleSelStart) titleSelStart = -1; }
+                return true;
+            }
+            case GLFW.GLFW_KEY_RIGHT -> {
+                if (!shift && titleHasSel()) { titleCursor = titleSelMax(); titleSelStart = -1; }
+                else { if (shift && !titleHasSel()) titleSelStart = titleCursor; titleCursor = ctrl ? TextCursor.wordBoundaryRight(titleBuffer, titleCursor) : Math.min(titleBuffer.length(), titleCursor + 1); if (shift && titleCursor == titleSelStart) titleSelStart = -1; }
+                return true;
+            }
+            case GLFW.GLFW_KEY_HOME -> { if (shift && !titleHasSel()) titleSelStart = titleCursor; titleCursor = 0; if (!shift) titleSelStart = -1; return true; }
+            case GLFW.GLFW_KEY_END  -> { if (shift && !titleHasSel()) titleSelStart = titleCursor; titleCursor = titleBuffer.length(); if (!shift) titleSelStart = -1; return true; }
+            case GLFW.GLFW_KEY_A -> {
+                if (ctrl) { titleSelStart = 0; titleCursor = titleBuffer.length(); }
+                return true;
+            }
+            case GLFW.GLFW_KEY_V -> {
+                if (ctrl) pasteTitleFromClipboard();
+                return true;
+            }
+            case GLFW.GLFW_KEY_Z -> {
+                if (ctrl) undoTitle();
+                return true;
+            }
         }
         return true;
+    }
+
+    private void pasteTitleFromClipboard() {
+        if (titleHasSel()) { pushTitleUndo(); titleDeleteSel(); }
+        else pushTitleUndo();
+        String clip = minecraft.keyboardHandler.getClipboard();
+        if (clip == null || clip.isEmpty()) return;
+        clip = clip.replaceAll("[\\r\\n]", " ").replaceAll("[^\\x20-\\x7E]", "");
+        int available = 40 - titleBuffer.length();
+        if (available <= 0) return;
+        if (clip.length() > available) clip = clip.substring(0, available);
+        titleBuffer = titleBuffer.substring(0, titleCursor) + clip + titleBuffer.substring(titleCursor);
+        titleCursor += clip.length();
     }
 
     @Override
     public boolean charTyped(char c, int mods) {
         if (renamingTitle) {
-            if (c >= 32 && c != 127 && titleBuffer.length() < 40) {
-                titleBuffer = titleBuffer.substring(0, titleCursor) + c + titleBuffer.substring(titleCursor);
-                titleCursor++;
+            if (c >= 32 && c != 127) {
+                pushTitleUndo();
+                if (titleHasSel()) titleDeleteSel();
+                if (titleBuffer.length() < 40) {
+                    titleBuffer = titleBuffer.substring(0, titleCursor) + c + titleBuffer.substring(titleCursor);
+                    titleCursor++;
+                }
             }
             return true;
         }
@@ -341,10 +420,30 @@ public class NotepadScreen extends Screen {
     }
 
     private void typeChar(char c) {
+        if (hasSelection()) deleteSelection();
         if (selected.content.length() >= NotepadData.MAX_CONTENT_LENGTH) return;
         pushUndo();
         selected.content = selected.content.substring(0, cursor) + c + selected.content.substring(cursor);
         cursor++;
+    }
+
+    private void pasteFromClipboard() {
+        if (selected == null) return;
+        if (hasSelection()) deleteSelection();
+        String clip = minecraft.keyboardHandler.getClipboard();
+        if (clip == null || clip.isEmpty()) return;
+        clip = clip.chars()
+            .filter(c -> c == '\n' || c == '\t' || (c >= 32 && c != 127))
+            .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
+            .toString();
+        if (clip.isEmpty()) return;
+        String t = selected.content;
+        int available = NotepadData.MAX_CONTENT_LENGTH - t.length();
+        if (available <= 0) return;
+        if (clip.length() > available) clip = clip.substring(0, available);
+        pushUndo();
+        selected.content = t.substring(0, cursor) + clip + t.substring(cursor);
+        cursor += clip.length();
     }
 
     // =========================================================
@@ -366,6 +465,56 @@ public class NotepadScreen extends Screen {
             try { cursor = Math.min(Integer.parseInt(snapshot.substring(sep + 1)), selected.content.length()); }
             catch (NumberFormatException ignored) { cursor = selected.content.length(); }
         }
+    }
+
+    private void pushTitleUndo() {
+        if (titleUndoStack.size() >= MAX_UNDO) titleUndoStack.pollFirst();
+        titleUndoStack.addLast(titleBuffer + "\u0000" + titleCursor);
+    }
+
+    private void undoTitle() {
+        if (titleUndoStack.isEmpty()) return;
+        String snapshot = titleUndoStack.pollLast();
+        int sep = snapshot.lastIndexOf('\u0000');
+        if (sep >= 0) {
+            titleBuffer = snapshot.substring(0, sep);
+            try { titleCursor = Math.min(Integer.parseInt(snapshot.substring(sep + 1)), titleBuffer.length()); }
+            catch (NumberFormatException ignored) { titleCursor = titleBuffer.length(); }
+            titleSelStart = -1;
+        }
+    }
+
+    // =========================================================
+    // Selection helpers — content editor
+    // =========================================================
+
+    private boolean hasSelection() { return selectionStart >= 0 && selectionStart != cursor; }
+    private int selMin() { return Math.min(selectionStart, cursor); }
+    private int selMax() { return Math.max(selectionStart, cursor); }
+
+    private void deleteSelection() {
+        if (!hasSelection()) return;
+        pushUndo();
+        int lo = selMin(), hi = selMax();
+        selected.content = selected.content.substring(0, lo) + selected.content.substring(hi);
+        cursor = lo;
+        selectionStart = -1;
+    }
+
+    // =========================================================
+    // Selection helpers — title editor
+    // =========================================================
+
+    private boolean titleHasSel() { return titleSelStart >= 0 && titleSelStart != titleCursor; }
+    private int titleSelMin() { return Math.min(titleSelStart, titleCursor); }
+    private int titleSelMax() { return Math.max(titleSelStart, titleCursor); }
+
+    private void titleDeleteSel() {
+        if (!titleHasSel()) return;
+        int lo = titleSelMin(), hi = titleSelMax();
+        titleBuffer = titleBuffer.substring(0, lo) + titleBuffer.substring(hi);
+        titleCursor = lo;
+        titleSelStart = -1;
     }
 
     // =========================================================
@@ -410,12 +559,26 @@ public class NotepadScreen extends Screen {
         }
 
         // Clicks in editor area
-        if (ix > ox + LIST_W && selected != null && !renamingTitle) {
+        if (ix > ox + LIST_W && selected != null) {
+            // Clicking content area while renaming title — commit and place cursor
+            if (renamingTitle) {
+                commitRename();
+                // fall through to handle content click below
+            }
+
             int titleY = oy + TORN + 18;
-            if (iy >= titleY && iy < titleY + 11 && ix < ox + W - 60) {
+            if (!renamingTitle && iy >= titleY && iy < titleY + 11 && ix < ox + W - 60) {
                 renamingTitle = true;
                 titleBuffer = selected.title;
                 titleCursor = titleBuffer.length();
+                titleSelStart = -1;
+                titleUndoStack.clear();
+                return true;
+            }
+            if (renamingTitle && iy >= oy + TORN + 18 && iy < oy + TORN + 29 && ix < ox + W - 60) {
+                titleSelStart = -1;
+                titleCursor = titleClickToCursor(ix);
+                draggingTitle = true;
                 return true;
             }
 
@@ -430,7 +593,9 @@ public class NotepadScreen extends Screen {
                             toggleTodo(rl.charStart());
                             return true;
                         }
+                        selectionStart = -1;
                         cursor = clickPosToCursor(ix, rl);
+                        draggingContent = true;
                         return true;
                     }
                 }
@@ -483,6 +648,59 @@ public class NotepadScreen extends Screen {
         else if (prefix.equals("[x] "))
             selected.content = t.substring(0, lineCharStart) + "[ ] " + t.substring(lineCharStart + 4);
         NotepadData.save();
+    }
+
+    @Override
+    public boolean mouseReleased(double mx, double my, int btn) {
+        draggingContent = false;
+        draggingTitle = false;
+        return super.mouseReleased(mx, my, btn);
+    }
+
+    @Override
+    public boolean mouseDragged(double mx, double my, int btn, double dx, double dy) {
+        int ix = (int) mx, iy = (int) my;
+        if (draggingContent && selected != null) {
+            int newCursor = cursor;
+            for (RenderedLine rl : renderedLines) {
+                if (iy >= rl.screenY() && iy < rl.screenY() + LINE_H) {
+                    newCursor = clickPosToCursor(ix, rl);
+                    break;
+                }
+            }
+            // Clamp to first/last line if dragging outside
+            if (iy < oy + TORN + 32 && !renderedLines.isEmpty())
+                newCursor = renderedLines.get(0).charStart();
+            else if (iy >= oy + H - TORN - 20 && !renderedLines.isEmpty())
+                newCursor = renderedLines.get(renderedLines.size() - 1).charEnd();
+
+            if (selectionStart < 0) selectionStart = cursor;
+            cursor = newCursor;
+            if (cursor == selectionStart) selectionStart = -1;
+            return true;
+        }
+        if (draggingTitle && renamingTitle) {
+            int newCursor = titleClickToCursor(ix);
+            if (titleSelStart < 0) titleSelStart = titleCursor;
+            titleCursor = newCursor;
+            if (titleCursor == titleSelStart) titleSelStart = -1;
+            return true;
+        }
+        return super.mouseDragged(mx, my, btn, dx, dy);
+    }
+
+    private int titleClickToCursor(int mx) {
+        int ex = ox + LIST_W + 24;
+        int relX = mx - ex;
+        if (relX <= 0) return 0;
+        for (int i = 0; i <= titleBuffer.length(); i++) {
+            int w = font.width(titleBuffer.substring(0, i));
+            if (w >= relX) {
+                int wPrev = i > 0 ? font.width(titleBuffer.substring(0, i - 1)) : 0;
+                return (relX - wPrev < w - relX) ? i - 1 : i;
+            }
+        }
+        return titleBuffer.length();
     }
 
     @Override
@@ -598,6 +816,12 @@ public class NotepadScreen extends Screen {
     private void drawTitle(GuiGraphics g, int ex, int titleY) {
         if (renamingTitle) {
             g.fill(ex - 2, titleY - 1, ox + W - 22, titleY + 11, 0x33FFFFFF);
+            // Selection highlight
+            if (titleHasSel()) {
+                int x1 = ex + font.width(titleBuffer.substring(0, titleSelMin()));
+                int x2 = ex + font.width(titleBuffer.substring(0, titleSelMax()));
+                g.fill(x1, titleY, x2, titleY + 9, 0x664488FF);
+            }
             g.drawString(font, titleBuffer, ex, titleY + 1, MarkdownRenderer.COL_TEXT, false);
             if (cursorVisible) {
                 int cx = ex + font.width(titleBuffer.substring(0, titleCursor));
@@ -643,8 +867,21 @@ public class NotepadScreen extends Screen {
                 if (dy >= clipTop - LINE_H && dy <= clipBot) {
                     renderedLines.add(new RenderedLine(segCharStart, segCharEnd, dy, type, raw));
                     if (cursorOnThisLine) {
-                        // Subtle highlight on active line
                         g.fill(ex - 2, dy - 1, ex + maxW, dy + LINE_H, 0x18000000);
+                    }
+                    // Selection highlight
+                    if (hasSelection()) {
+                        int lo = selMin(), hi = selMax();
+                        int lineStart = segCharStart;
+                        int lineEnd   = segCharEnd;
+                        if (lo < lineEnd && hi > lineStart) {
+                            int selLo = Math.max(lo, lineStart) - lineStart;
+                            int selHi = Math.min(hi, lineEnd)   - lineStart;
+                            String rawSub = raw.substring(0, Math.min(raw.length(), lineEnd - lineStart));
+                            int x1 = ex + xOff + font.width(rawSub.substring(0, Math.min(selLo, rawSub.length())));
+                            int x2 = ex + xOff + font.width(rawSub.substring(0, Math.min(selHi, rawSub.length())));
+                            g.fill(x1, dy, x2, dy + LINE_H - 1, 0x664488FF);
+                        }
                     }
                     MarkdownRenderer.drawLine(g, font, seg, ex + xOff, dy, renderType, maxW);
                 }

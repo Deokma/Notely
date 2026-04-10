@@ -1,37 +1,26 @@
 plugins {
+    id 'multiloader-loader'
     id 'net.neoforged.moddev'
 }
 
 neoForge {
-    version = project.neoforge_version
+    version = neoforge_version
 
     runs {
         client {
             client()
-            ideName = 'NeoForge Client'
+            ideName = "NeoForge Client (${project.path})"
             jvmArguments.addAll '-Xmx2G', '-Xms512M'
         }
         server {
             server()
-            ideName = 'NeoForge Server'
+            ideName = "NeoForge Server (${project.path})"
         }
     }
 
     mods {
-        notepad {
+        "${mod_id}" {
             sourceSet sourceSets.main
-            sourceSet project(':common').sourceSets.main
         }
     }
-}
-
-dependencies {
-    compileOnly project(path: ':common', configuration: 'namedElements')
-    runtimeOnly project(path: ':common', configuration: 'namedElements')
-}
-
-jar {
-    from project(':common').sourceSets.main.output
-    archiveClassifier = ''
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

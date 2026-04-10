@@ -76,14 +76,39 @@ public class PinnedNotesOverlay {
 
         // Content
         if (note != null && !note.content.isEmpty()) {
-            int ty = y + HEADER + PAD;
-            for (String line : note.content.split("\n")) {
-                if (ty + LINE_H > y + h - 4) {
-                    gfx.drawString(mc.font, "...", x + PAD, ty, 0x88000000, false);
-                    break;
-                }
-                drawStickerLine(gfx, mc, s, line, x, ty, w, mx, my, alpha);
+            String[] lines = note.content.split("\n");
+            int lineH = Math.max(1, (int) (LINE_H * s.fontSize));
+            int visibleLines = (h - HEADER - PAD * 2) / lineH;
+            int maxScroll = Math.max(0, lines.length - visibleLines);
+            s.scrollOffset = Math.max(0, Math.min(s.scrollOffset, maxScroll));
+
+            gfx.enableScissor(x, y + HEADER, x + w, y + h - 4);
+
+            // Apply font scale
+            var pose = gfx.pose();
+            pose.pushPose();
+            pose.translate(x + PAD, y + HEADER + PAD, 0);
+            pose.scale(s.fontSize, s.fontSize, 1.0f);
+
+            int ty = 0;
+            for (int li = s.scrollOffset; li < lines.length; li++) {
+                if (ty + LINE_H > (int) ((h - HEADER - PAD * 2) / s.fontSize)) break;
+                // Draw line at scaled coordinates (origin shifted to x+PAD, y+HEADER+PAD)
+                drawStickerLineScaled(gfx, mc, s, lines[li], 0, ty, (int) ((w - PAD * 2) / s.fontSize), mx - x - PAD, my - y - HEADER - PAD, alpha);
                 ty += LINE_H;
+            }
+
+            pose.popPose();
+            gfx.disableScissor();
+
+            // Scrollbar
+            if (lines.length > visibleLines) {
+                float scroll = maxScroll > 0 ? (float) s.scrollOffset / maxScroll : 0;
+                int barH = h - HEADER - 8;
+                int thumbH = Math.max(6, barH * visibleLines / lines.length);
+                int thumbY = y + HEADER + 4 + (int) ((barH - thumbH) * scroll);
+                gfx.fill(x + w - 4, y + HEADER + 4, x + w - 2, y + h - 4, 0x33000000);
+                gfx.fill(x + w - 4, thumbY, x + w - 2, thumbY + thumbH, 0x88000000);
             }
         }
 
@@ -95,6 +120,13 @@ public class PinnedNotesOverlay {
             gfx.fill(rx + k * 2 + 1, y + h - 2, rx + k * 2 + 2, y + h - 1, 0x88555555);
             gfx.fill(rx + k * 2 + 1, y + h - 4, rx + k * 2 + 2, y + h - 3, 0x88555555);
         }
+    }
+
+    private static void drawStickerLineScaled(GuiGraphics gfx, Minecraft mc, Sticker s,
+            String line, int x, int ty, int maxW, int relMx, int relMy, int alpha) {
+        // Reuse drawStickerLine with fake absolute coords — pass 0,0 as sticker origin
+        // and adjust: x=0, ty=ty, w=maxW+PAD*2 (we already translated)
+        drawStickerLine(gfx, mc, s, line, -PAD, ty, maxW + PAD * 2, relMx, relMy, alpha);
     }
 
     private static void drawStickerLine(GuiGraphics gfx, Minecraft mc, Sticker s,
@@ -202,11 +234,19 @@ public class PinnedNotesOverlay {
         if (note == null) return false;
 
         int x = (int) s.x, y = (int) s.y, h = (int) s.height;
+        String[] lines = note.content.split("\n");
+        int lineH = Math.max(1, (int) (LINE_H * s.fontSize));
         int ty = y + HEADER + PAD;
         int ci = 0;
 
-        for (String line : note.content.split("\n")) {
-            if (ty + LINE_H > y + h - 4) break;
+        // Skip lines above scroll offset
+        for (int li = 0; li < s.scrollOffset && li < lines.length; li++) {
+            ci += lines[li].length() + 1;
+        }
+
+        for (int li = s.scrollOffset; li < lines.length; li++) {
+            if (ty + lineH > y + h - 4) break;
+            String line = lines[li];
             if (line.startsWith("[ ] ") || line.startsWith("[x] ")) {
                 if (mx >= x + PAD && mx < x + PAD + 9 && my >= ty && my < ty + 8) {
                     if (ci + 4 <= note.content.length()) {
@@ -220,7 +260,7 @@ public class PinnedNotesOverlay {
                 }
             }
             ci += line.length() + 1;
-            ty += LINE_H;
+            ty += lineH;
         }
         return false;
     }
@@ -242,6 +282,43 @@ public class PinnedNotesOverlay {
 
     public static void handleRelease() {
         if (dragged != null) { NotepadData.save(); dragged = null; resizing = false; }
+    }
+
+    public static boolean handleScroll(double rawX, double rawY, double delta, Minecraft mc) {
+        int sw = mc.getWindow().getGuiScaledWidth();
+        int sh = mc.getWindow().getGuiScaledHeight();
+        int mx = scaled(rawX, mc.getWindow().getScreenWidth(), sw);
+        int my = scaled(rawY, mc.getWindow().getScreenHeight(), sh);
+
+        // Check if Ctrl is held
+        long win = mc.getWindow().getWindow();
+        boolean ctrl = org.lwjgl.glfw.GLFW.glfwGetKey(win, org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_CONTROL)  == org.lwjgl.glfw.GLFW.GLFW_PRESS
+                    || org.lwjgl.glfw.GLFW.glfwGetKey(win, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_CONTROL) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+
+        List<Sticker> list = NotepadData.stickers;
+        for (int i = list.size() - 1; i >= 0; i--) {
+            Sticker s = list.get(i);
+            int x = (int) s.x, y = (int) s.y, w = (int) s.width, h = (int) s.height;
+            if (mx < x || mx > x + w || my < y || my > y + h) continue;
+
+            if (ctrl) {
+                // Ctrl+scroll — change font size
+                s.fontSize = Math.max(0.5f, Math.min(2.0f, s.fontSize + (float) delta * 0.1f));
+                NotepadData.save();
+            } else {
+                // Normal scroll — scroll content
+                if (my < y + HEADER) continue;
+                Note note = NotepadData.findNote(s.noteId);
+                if (note == null) continue;
+                int lineH = (int) (LINE_H * s.fontSize);
+                int lines = note.content.split("\n", -1).length;
+                int visibleLines = (h - HEADER - PAD * 2) / Math.max(1, lineH);
+                int maxScroll = Math.max(0, lines - visibleLines);
+                s.scrollOffset = Math.max(0, Math.min(s.scrollOffset - (int) delta, maxScroll));
+            }
+            return true;
+        }
+        return false;
     }
 
     public static boolean isDragging() { return dragged != null; }
