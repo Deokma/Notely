@@ -1,0 +1,9 @@
+{
+  "sources": [
+    {
+      "type": "minecraft:single",
+      "resource": "notely:gui/notepad",
+      "sprite": "notely:gui/notepad"
+    }
+  ]
+}

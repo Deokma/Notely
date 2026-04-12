@@ -20,6 +20,7 @@ public class NotelyModFabricClient implements ClientModInitializer {
     public void onInitializeClient() {
         NotelyModClient.init();
         KeyBindingHelper.registerKeyBinding(NotelyModClient.createKeyMapping());
+        NotelyModClient.setScreenFactory(NotelyScreenFabric::new);
 
         // World/server context switching
         ClientPlayConnectionEvents.JOIN.register((handler, sender, mc) -> {
@@ -71,7 +72,7 @@ public class NotelyModFabricClient implements ClientModInitializer {
             if (mc.screen instanceof NotelyScreen) return;
             if (mc.getWindow() == null) return;
 
-            long win = mc.getWindow().getWindow();
+            long win = NotelyModClient.getGlfwWindow(mc);
             boolean down = GLFW.glfwGetMouseButton(win, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
 
             if (down && !mouseWasDown) {

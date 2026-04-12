@@ -3,6 +3,7 @@ package by.deokma.notely.gui;
 import by.deokma.notely.NotelyData;
 import by.deokma.notely.NotelyData.Note;
 import by.deokma.notely.NotelyData.Sticker;
+import by.deokma.notely.NotelyModClient;
 import by.deokma.notely.util.MarkdownRenderer;
 import by.deokma.notely.util.MarkdownRenderer.LineType;
 import net.minecraft.client.Minecraft;
@@ -84,23 +85,31 @@ public class PinnedNotesOverlay {
 
             gfx.enableScissor(x, y + HEADER, x + w, y + h - 4);
 
-            // Apply font scale
-            var pose = gfx.pose();
-            pose.pushPose();
-            pose.translate(x + PAD, y + HEADER + PAD, 0);
-            pose.scale(s.fontSize, s.fontSize, 1.0f);
-
-            int ty = 0;
-            for (int li = s.scrollOffset; li < lines.length; li++) {
-                if (ty + LINE_H > (int) ((h - HEADER - PAD * 2) / s.fontSize)) break;
-                // Draw line at scaled coordinates (origin shifted to x+PAD, y+HEADER+PAD)
-                drawStickerLineScaled(gfx, mc, s, lines[li], 0, ty, (int) ((w - PAD * 2) / s.fontSize), mx - x - PAD, my - y - HEADER - PAD, alpha);
-                ty += LINE_H;
+            if (s.fontSize != 1.0f) {
+                // Scale text using Matrix3x2fStack (1.21.6+) or PoseStack (1.21.1)
+                Object pose = gfx.pose();
+                boolean pushed = tryPushMatrix(pose, x + PAD, y + HEADER + PAD, s.fontSize);
+                // In scaled space: width and clip height must be divided by fontSize
+                int scaledW = pushed ? (int)(w / s.fontSize) : w;
+                int ty = pushed ? 0 : y + HEADER + PAD;
+                int drawX = pushed ? -PAD : x; // drawStickerLine adds PAD internally
+                int clipH = pushed ? (int)((h - HEADER - PAD * 2) / s.fontSize) : h;
+                for (int li = s.scrollOffset; li < lines.length; li++) {
+                    if (ty + LINE_H > (pushed ? clipH : y + h - 4)) break;
+                    drawStickerLine(gfx, mc, s, lines[li], drawX, ty, scaledW, mx, my, alpha);
+                    ty += LINE_H;
+                }
+                if (pushed) tryPopMatrix(pose);
+            } else {
+                int ty = y + HEADER + PAD;
+                for (int li = s.scrollOffset; li < lines.length; li++) {
+                    if (ty + lineH > y + h - 4) break;
+                    drawStickerLine(gfx, mc, s, lines[li], x, ty, w, mx, my, alpha);
+                    ty += lineH;
+                }
             }
 
-            pose.popPose();
             gfx.disableScissor();
-
             // Scrollbar
             if (lines.length > visibleLines) {
                 float scroll = maxScroll > 0 ? (float) s.scrollOffset / maxScroll : 0;
@@ -120,13 +129,6 @@ public class PinnedNotesOverlay {
             gfx.fill(rx + k * 2 + 1, y + h - 2, rx + k * 2 + 2, y + h - 1, 0x88555555);
             gfx.fill(rx + k * 2 + 1, y + h - 4, rx + k * 2 + 2, y + h - 3, 0x88555555);
         }
-    }
-
-    private static void drawStickerLineScaled(GuiGraphics gfx, Minecraft mc, Sticker s,
-                                              String line, int x, int ty, int maxW, int relMx, int relMy, int alpha) {
-        // Reuse drawStickerLine with fake absolute coords — pass 0,0 as sticker origin
-        // and adjust: x=0, ty=ty, w=maxW+PAD*2 (we already translated)
-        drawStickerLine(gfx, mc, s, line, -PAD, ty, maxW + PAD * 2, relMx, relMy, alpha);
     }
 
     private static void drawStickerLine(GuiGraphics gfx, Minecraft mc, Sticker s,
@@ -300,9 +302,10 @@ public class PinnedNotesOverlay {
         int my = scaled(rawY, mc.getWindow().getScreenHeight(), sh);
 
         // Check if Ctrl is held
-        long win = mc.getWindow().getWindow();
-        boolean ctrl = org.lwjgl.glfw.GLFW.glfwGetKey(win, org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_CONTROL) == org.lwjgl.glfw.GLFW.GLFW_PRESS
-                || org.lwjgl.glfw.GLFW.glfwGetKey(win, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_CONTROL) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
+        long win = NotelyModClient.getGlfwWindow(mc);
+        boolean ctrl = win != 0 && (
+            org.lwjgl.glfw.GLFW.glfwGetKey(win, org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_CONTROL)  == org.lwjgl.glfw.GLFW.GLFW_PRESS
+         || org.lwjgl.glfw.GLFW.glfwGetKey(win, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_CONTROL) == org.lwjgl.glfw.GLFW.GLFW_PRESS);
 
         List<Sticker> list = NotelyData.stickers;
         for (int i = list.size() - 1; i >= 0; i--) {
@@ -332,6 +335,55 @@ public class PinnedNotesOverlay {
 
     public static boolean isDragging() {
         return dragged != null;
+    }
+
+    // =========================================================
+    // Matrix transform helpers (compatible with 1.21.1 PoseStack and 1.21.6+ Matrix3x2fStack)
+    // =========================================================
+
+    /** Push matrix, translate to (tx, ty), scale by s. Returns true if successful. */
+    private static boolean tryPushMatrix(Object pose, float tx, float ty, float s) {
+        // 1.21.6+ Matrix3x2fStack
+        try {
+            pose.getClass().getMethod("pushMatrix").invoke(pose);
+            // translate(float, float)
+            try {
+                pose.getClass().getMethod("translate", float.class, float.class).invoke(pose, tx, ty);
+            } catch (NoSuchMethodException e) {
+                // translate(Vector2f) — create via reflection
+                Class<?> vec2 = Class.forName("org.joml.Vector2f", true, pose.getClass().getClassLoader());
+                Object v = vec2.getConstructor(float.class, float.class).newInstance(tx, ty);
+                pose.getClass().getMethod("translate", vec2).invoke(pose, v);
+            }
+            // scale(float) or scale(float, float)
+            try {
+                pose.getClass().getMethod("scale", float.class, float.class).invoke(pose, s, s);
+            } catch (NoSuchMethodException e) {
+                pose.getClass().getMethod("scale", float.class).invoke(pose, s);
+            }
+            return true;
+        } catch (Exception ignored) {}
+        // 1.21.1 PoseStack
+        try {
+            pose.getClass().getMethod("pushPose").invoke(pose);
+            pose.getClass().getMethod("translate", double.class, double.class, double.class)
+                .invoke(pose, (double) tx, (double) ty, 0.0);
+            Object last = pose.getClass().getMethod("last").invoke(pose);
+            Object mat = last.getClass().getMethod("pose").invoke(last);
+            mat.getClass().getMethod("scale", float.class, float.class, float.class).invoke(mat, s, s, 1f);
+            return true;
+        } catch (Exception ignored) {}
+        return false;
+    }
+
+    private static void tryPopMatrix(Object pose) {
+        try {
+            pose.getClass().getMethod("popMatrix").invoke(pose);
+            return;
+        } catch (Exception ignored) {}
+        try {
+            pose.getClass().getMethod("popPose").invoke(pose);
+        } catch (Exception ignored) {}
     }
 
     // =========================================================

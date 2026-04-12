@@ -61,4 +61,4 @@ rootProject.name = 'notely'
 include('common')
 include('fabric')
 include('neoforge')
-include('forge')
+// include('forge') // disabled — jopt.simple module issue with Java 21

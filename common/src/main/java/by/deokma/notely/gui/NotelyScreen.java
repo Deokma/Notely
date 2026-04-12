@@ -8,14 +8,18 @@ import by.deokma.notely.util.TextCursor;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
+
+// Compatibility imports — resolved at runtime based on MC version
+// ResourceLocation (1.21.1) / Identifier (1.21.11) handled via reflection in TEX_NOTEPAD
 
 public class NotelyScreen extends Screen {
 
@@ -90,7 +94,7 @@ public class NotelyScreen extends Screen {
     private final List<Button> colorBtns = new ArrayList<>();
 
     // ---- Textures ----
-    private static final ResourceLocation TEX_NOTEPAD = ResourceLocation.fromNamespaceAndPath("notely", "textures/gui/notepad.png");
+    private static final Identifier TEX_NOTEPAD = Identifier.fromNamespaceAndPath("notely", "gui/notepad");
 
     private static final int MOD_CTRL = 2;
     private static final int MOD_SHIFT = 1;
@@ -272,15 +276,21 @@ public class NotelyScreen extends Screen {
     // Keyboard input
     // =========================================================
 
-    @Override
+    // 1.21.1 compatible signature
     public boolean keyPressed(int key, int scan, int mods) {
+        return handleKeyPressed(key, scan, mods);
+    }
+
+    protected boolean handleKeyPressed(int key, int scan, int mods) {
         if (key == GLFW.GLFW_KEY_ESCAPE) {
             onClose();
             return true;
         }
 
         if (renamingTitle) return handleTitleKey(key, mods);
-        if (selected == null) return super.keyPressed(key, scan, mods);
+        if (selected == null) {
+            return false;
+        }
 
         String t = selected.content;
         boolean ctrl = (mods & MOD_CTRL) != 0;
@@ -386,7 +396,7 @@ public class NotelyScreen extends Screen {
                 return true;
             }
         }
-        return super.keyPressed(key, scan, mods);
+        return false;
     }
 
     private boolean handleTitleKey(int key, int mods) {
@@ -499,7 +509,6 @@ public class NotelyScreen extends Screen {
         titleCursor += clip.length();
     }
 
-    @Override
     public boolean charTyped(char c, int mods) {
         if (renamingTitle) {
             if (c >= 32 && c != 127) {
@@ -643,8 +652,12 @@ public class NotelyScreen extends Screen {
     // Mouse input
     // =========================================================
 
-    @Override
+    // 1.21.1 compatible signature
     public boolean mouseClicked(double mx, double my, int btn) {
+        return handleMouseClicked(mx, my, btn);
+    }
+
+    protected boolean handleMouseClicked(double mx, double my, int btn) {
         int ix = (int) mx, iy = (int) my;
 
         if (contextMenuNoteIdx >= 0) {
@@ -727,7 +740,7 @@ public class NotelyScreen extends Screen {
             }
         }
 
-        return super.mouseClicked(mx, my, btn);
+        return false;
     }
 
     private void handleContextMenuClick(int ix, int iy) {
@@ -780,15 +793,21 @@ public class NotelyScreen extends Screen {
         NotelyData.save();
     }
 
-    @Override
     public boolean mouseReleased(double mx, double my, int btn) {
-        draggingContent = false;
-        draggingTitle = false;
-        return super.mouseReleased(mx, my, btn);
+        return handleMouseReleased();
     }
 
-    @Override
     public boolean mouseDragged(double mx, double my, int btn, double dx, double dy) {
+        return handleMouseDragged(mx, my, dx, dy);
+    }
+
+    protected boolean handleMouseReleased() {
+        draggingContent = false;
+        draggingTitle = false;
+        return false;
+    }
+
+    protected boolean handleMouseDragged(double mx, double my, double dx, double dy) {
         int ix = (int) mx, iy = (int) my;
         if (draggingContent && selected != null) {
             int newCursor = cursor;
@@ -816,7 +835,7 @@ public class NotelyScreen extends Screen {
             if (titleCursor == titleSelStart) titleSelStart = -1;
             return true;
         }
-        return super.mouseDragged(mx, my, btn, dx, dy);
+        return false;
     }
 
     private int titleClickToCursor(int mx) {
@@ -833,7 +852,6 @@ public class NotelyScreen extends Screen {
         return titleBuffer.length();
     }
 
-    @Override
     public boolean mouseScrolled(double mx, double my, double dx, double dy) {
         if ((int) mx < ox + LIST_W) {
             listOffset = Mth.clamp((int) (listOffset - dy), 0, Math.max(0, NotelyData.notes.size() - visibleListRows()));
@@ -859,10 +877,8 @@ public class NotelyScreen extends Screen {
 
     private void drawFrame(GuiGraphics g) {
         int x = ox, y = oy;
-
-        // Background texture (stretched to W x H)
-        g.blit(TEX_NOTEPAD, x, y, 0, 0, W, H, 512, 512);
-
+        // Background texture via sprite atlas (atlases/gui.json registers notely:gui/notepad)
+        g.blitSprite(RenderPipelines.GUI_TEXTURED, TEX_NOTEPAD, x, y, 512, 512);
         // Toolbar strip
         g.fill(x + LIST_W + 1, y + TORN, x + W, y + TORN + 17, COL_TOOLBAR);
 
@@ -881,6 +897,7 @@ public class NotelyScreen extends Screen {
 
         int clipY1 = oy + TORN + 14, clipY2 = oy + H - TORN - 20;
         g.enableScissor(ox + 1, clipY1, ox + LIST_W - 1, clipY2);
+
 
         int visible = visibleListRows();
         for (int i = 0; i <= visible; i++) {

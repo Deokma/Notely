@@ -27,6 +27,7 @@ public class NotelyModNeoForge {
 
     private void onClientSetup(FMLClientSetupEvent event) {
         NotelyModClient.init();
+        NotelyModClient.setScreenFactory(NotelyScreenNeoForge::new);
         NeoForge.EVENT_BUS.addListener(this::onClientTick);
         NeoForge.EVENT_BUS.addListener(this::onRenderHud);
         NeoForge.EVENT_BUS.addListener(this::onPlayerLoggingIn);
@@ -50,7 +51,7 @@ public class NotelyModNeoForge {
         if (mc.screen instanceof NotelyScreen) return;
         if (mc.getWindow() == null) return;
 
-        long win = mc.getWindow().getWindow();
+        long win = NotelyModClient.getGlfwWindow(mc);
         boolean down = GLFW.glfwGetMouseButton(win, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
 
         if (down && !mouseWasDown) {

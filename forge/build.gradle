@@ -13,8 +13,6 @@ minecraft {
             taskName 'Client'
             property 'forge.logging.markers', 'REGISTRIES'
             property 'forge.logging.console.level', 'debug'
-            jvmArg "--module-path=${projectDir}/libs/jopt-simple-6.0-alpha-3.jar"
-            jvmArg '--add-modules=jopt.simple'
             mods {
                 "${mod_id}" {
                     source sourceSets.main
@@ -27,8 +25,6 @@ minecraft {
             taskName 'Server'
             property 'forge.logging.markers', 'REGISTRIES'
             property 'forge.logging.console.level', 'debug'
-            jvmArg "--module-path=${projectDir}/libs/jopt-simple-6.0-alpha-3.jar"
-            jvmArg '--add-modules=jopt.simple'
             mods {
                 "${mod_id}" {
                     source sourceSets.main
@@ -40,8 +36,7 @@ minecraft {
 
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
-    // jopt-simple 6.0-alpha-3 is required as a named module by ForgeBootstrap 2.1.3 on Java 21
-    runtimeOnly files('libs/jopt-simple-6.0-alpha-3.jar')
+    runtimeOnly files('libs/jopt-simple-modular.jar')
 }
 
 jar {
@@ -54,5 +49,40 @@ jar {
             'Implementation-Version': project.jar.archiveVersion,
             'Implementation-Vendor' : mod_author,
         ])
+    }
+}
+
+// Patch: inject jopt-simple into the module path written by ForgeGradle
+// ForgeGradle writes vmArgs to a file read by ForgeBootstrap — we patch it after prepareRuns
+afterEvaluate {
+    def joptJar = file("${projectDir}/libs/jopt-simple-modular.jar").absolutePath.replace('\\', '/')
+    def patch = "--module-path=${joptJar}\n--add-modules=jopt.simple\n"
+
+    // Find the task that generates vmArgs files and patch after it
+    tasks.matching { it.name.toLowerCase().contains('prepare') && it.name.toLowerCase().contains('client') }.configureEach {
+        doLast {
+            fileTree(buildDir).matching { include '**/*vmArgs*', '**/*VmArgs*' }.each { f ->
+                def content = f.text
+                if (!content.contains('jopt.simple')) {
+                    f.text = patch + content
+                    logger.lifecycle("Patched jopt.simple into ${f.name}")
+                }
+            }
+        }
+    }
+
+    // Also patch after any task that writes vmArgs
+    tasks.configureEach { task ->
+        if (task.name == 'prepareRuns' || task.name == 'configureClientLaunch' || task.name == 'generateClientRunVmArgs') {
+            task.doLast {
+                fileTree(buildDir).matching { include '**/*vmArgs*', '**/*VmArgs*', '**/*vm_args*' }.each { f ->
+                    def content = f.text
+                    if (!content.contains('jopt.simple')) {
+                        f.text = patch + content
+                        logger.lifecycle("Patched jopt.simple into ${f.name}")
+                    }
+                }
+            }
+        }
     }
 }
