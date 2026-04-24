@@ -29,7 +29,9 @@ public class PinnedNotesOverlay {
 
     public static void render(Object gfxObj, int sw, int sh) {
         if (!(gfxObj instanceof GuiGraphics gfx)) return;
+        if (!NotelyData.isInWorld()) return; // don't render in main menu or loading screens
         Minecraft mc = Minecraft.getInstance();
+        if (mc.options.hideGui) return; // respect F1 hide HUD
         int mx = scaled(mc.mouseHandler.xpos(), mc.getWindow().getScreenWidth(), sw);
         int my = scaled(mc.mouseHandler.ypos(), mc.getWindow().getScreenHeight(), sh);
         List<Sticker> list = NotelyData.stickers;
@@ -181,11 +183,21 @@ public class PinnedNotesOverlay {
     // =========================================================
 
     public static boolean handlePress(double rawX, double rawY, Minecraft mc) {
+        if (!NotelyData.isInWorld()) return false;
         int sw = mc.getWindow().getGuiScaledWidth();
         int sh = mc.getWindow().getGuiScaledHeight();
         int mx = scaled(rawX, mc.getWindow().getScreenWidth(), sw);
         int my = scaled(rawY, mc.getWindow().getScreenHeight(), sh);
+        return handlePressAt(mx, my);
+    }
 
+    /** Use when coordinates are already GUI-scaled (e.g. from ScreenEvent). */
+    public static boolean handlePressScaled(double scaledX, double scaledY) {
+        if (!NotelyData.isInWorld()) return false;
+        return handlePressAt((int) scaledX, (int) scaledY);
+    }
+
+    private static boolean handlePressAt(int mx, int my) {
         List<Sticker> list = NotelyData.stickers;
         for (int i = list.size() - 1; i >= 0; i--) {
             Sticker s = list.get(i);
@@ -276,6 +288,16 @@ public class PinnedNotesOverlay {
         int sh = mc.getWindow().getGuiScaledHeight();
         float mx = (float) (rawX * sw / mc.getWindow().getScreenWidth());
         float my = (float) (rawY * sh / mc.getWindow().getScreenHeight());
+        applyDrag(mx, my);
+    }
+
+    /** Use when coordinates are already GUI-scaled (e.g. from ScreenEvent). */
+    public static void handleDragScaled(double scaledX, double scaledY) {
+        if (dragged == null) return;
+        applyDrag((float) scaledX, (float) scaledY);
+    }
+
+    private static void applyDrag(float mx, float my) {
         if (resizing) {
             dragged.width = Math.max(MIN_W, mx - dragOX - dragged.x);
             dragged.height = Math.max(MIN_H, my - dragOY - dragged.y);
@@ -298,7 +320,15 @@ public class PinnedNotesOverlay {
         int sh = mc.getWindow().getGuiScaledHeight();
         int mx = scaled(rawX, mc.getWindow().getScreenWidth(), sw);
         int my = scaled(rawY, mc.getWindow().getScreenHeight(), sh);
+        return handleScrollAt(mx, my, delta, mc);
+    }
 
+    /** Use when coordinates are already GUI-scaled (e.g. from ScreenEvent). */
+    public static boolean handleScrollScaled(double scaledX, double scaledY, double delta, Minecraft mc) {
+        return handleScrollAt((int) scaledX, (int) scaledY, delta, mc);
+    }
+
+    private static boolean handleScrollAt(int mx, int my, double delta, Minecraft mc) {
         // Check if Ctrl is held
         long win = mc.getWindow().getWindow();
         boolean ctrl = org.lwjgl.glfw.GLFW.glfwGetKey(win, org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_CONTROL) == org.lwjgl.glfw.GLFW.GLFW_PRESS
@@ -311,11 +341,9 @@ public class PinnedNotesOverlay {
             if (mx < x || mx > x + w || my < y || my > y + h) continue;
 
             if (ctrl) {
-                // Ctrl+scroll — change font size
                 s.fontSize = Math.max(0.5f, Math.min(2.0f, s.fontSize + (float) delta * 0.1f));
                 NotelyData.save();
             } else {
-                // Normal scroll — scroll content
                 if (my < y + HEADER) continue;
                 Note note = NotelyData.findNote(s.noteId);
                 if (note == null) continue;

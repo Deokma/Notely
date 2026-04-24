@@ -21,8 +21,10 @@ public class NotelyData {
     public static final List<Note> notes = new ArrayList<>();
     public static final List<Sticker> stickers = new ArrayList<>();
 
-    /** Current context key: world folder name or server address. Null = global fallback. */
+    /** Current context key: world folder name or server address. Null = not in a world. */
     private static String currentContext = null;
+    /** True when player is in a world/server (between loadForContext and clearContext). */
+    private static boolean inWorld = false;
 
     // ---- Data classes ----
 
@@ -118,33 +120,39 @@ public class NotelyData {
 
     // ---- Context (per-world/server notes) ----
 
+    public static boolean isInWorld() {
+        return inWorld;
+    }
+
     /**
      * Switch context to a specific world or server, saving current data first.
      * @param contextKey sanitized folder name: world name or "server_&lt;address&gt;"
      */
     public static void loadForContext(String contextKey) {
-        save();
+        if (inWorld) save(); // save previous context if any
         currentContext = sanitize(contextKey);
+        inWorld = true;
         notes.clear();
         stickers.clear();
         load();
         NotelyMod.LOG.info("Notely: loaded context '{}'", currentContext);
     }
 
-    /** Called on disconnect — saves and resets to global context. */
+    /** Called on disconnect — saves current context and clears data. */
     public static void clearContext() {
-        save();
+        if (inWorld) save();
         currentContext = null;
+        inWorld = false;
         notes.clear();
         stickers.clear();
-        load();
-        NotelyMod.LOG.info("Notely: returned to global context");
+        NotelyMod.LOG.info("Notely: cleared context (left world)");
     }
 
     private static Path dataDir() {
         Path base = Minecraft.getInstance().gameDirectory.toPath().resolve("notepad");
         if (currentContext != null) return base.resolve(currentContext);
-        return base;
+        // Fallback: should not happen during normal play, but keep for safety
+        return base.resolve("_global");
     }
 
     private static String sanitize(String name) {

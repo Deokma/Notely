@@ -13,7 +13,7 @@ minecraft {
             taskName 'Client'
             property 'forge.logging.markers', 'REGISTRIES'
             property 'forge.logging.console.level', 'debug'
-            jvmArg "--module-path=${projectDir}/libs/jopt-simple-6.0-alpha-3.jar"
+            jvmArg "--module-path=${project.file('libs/jopt-simple-6.0-alpha-3.jar').absolutePath}"
             jvmArg '--add-modules=jopt.simple'
             mods {
                 "${mod_id}" {
@@ -27,7 +27,7 @@ minecraft {
             taskName 'Server'
             property 'forge.logging.markers', 'REGISTRIES'
             property 'forge.logging.console.level', 'debug'
-            jvmArg "--module-path=${projectDir}/libs/jopt-simple-6.0-alpha-3.jar"
+            jvmArg "--module-path=${project.file('libs/jopt-simple-6.0-alpha-3.jar').absolutePath}"
             jvmArg '--add-modules=jopt.simple'
             mods {
                 "${mod_id}" {

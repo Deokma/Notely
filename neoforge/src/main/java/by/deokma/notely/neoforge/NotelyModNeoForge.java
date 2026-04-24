@@ -47,7 +47,7 @@ public class NotelyModNeoForge {
 
         NotelyModClient.onKeyTick();
 
-        if (mc.screen instanceof NotelyScreen) return;
+        if (!NotelyModClient.isStickersAllowedOnScreen(mc)) return;
         if (mc.getWindow() == null) return;
 
         long win = mc.getWindow().getWindow();
@@ -66,6 +66,7 @@ public class NotelyModNeoForge {
 
     private void onRenderHud(RenderGuiEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
+        if (!NotelyModClient.isStickersAllowedOnScreen(mc)) return;
         if (mc.screen instanceof NotelyScreen) return;
         PinnedNotesOverlay.render(
             event.getGuiGraphics(),
