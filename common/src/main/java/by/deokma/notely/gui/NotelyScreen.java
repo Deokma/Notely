@@ -24,13 +24,10 @@ import java.util.List;
 public class NotelyScreen extends Screen {
 
     // ---- Layout constants ----
-    // W and H are computed from window size (percentage-based), see computeLayout()
-    private static final float W_PCT  = 0.70f;
-    private static final float H_PCT  = 0.75f;
-    private static final int   W_MIN  = 320;
-    private static final int   H_MIN  = 200;
-    private static final int   W_MAX  = 700;
-    private static final int   H_MAX  = 480;
+    // Fixed size matching the actual notepad artwork in the 512x512 texture.
+    // The artwork occupies exactly 440x280 pixels in the top-left of the texture.
+    private static final int W_FIXED    = 430;
+    private static final int H_FIXED    = 270;
     private static final float LIST_W_PCT = 0.30f;
 
     private static final int TORN   = 6;
@@ -38,9 +35,9 @@ public class NotelyScreen extends Screen {
     private static final int LINE_H = 12;
 
     // Computed each init()
-    private int W      = 440;
-    private int H      = 280;
-    private int LIST_W = 130;
+    private int W      = W_FIXED;
+    private int H      = H_FIXED;
+    private int LIST_W = (int)(W_FIXED * LIST_W_PCT);
 
     // ---- Color palette ----
     private static final int COL_LIST = 0xFFD8C9A8;
@@ -106,7 +103,7 @@ public class NotelyScreen extends Screen {
     private final List<Button> colorBtns = new ArrayList<>();
 
     // ---- Textures ----
-    private static final Identifier TEX_NOTEPAD = Identifier.fromNamespaceAndPath("notely", "gui/notepad");
+    private static final Identifier TEX_NOTEPAD = Identifier.fromNamespaceAndPath("notely", "textures/gui/notepad.png");
 
     private static final int MOD_CTRL = 2;
     private static final int MOD_SHIFT = 1;
@@ -128,8 +125,10 @@ public class NotelyScreen extends Screen {
     // =========================================================
 
     private void computeLayout() {
-        W = Mth.clamp((int)(width  * W_PCT), W_MIN, W_MAX);
-        H = Mth.clamp((int)(height * H_PCT), H_MIN, H_MAX);
+        // Fixed size matching the artwork — always 440x280 GUI pixels.
+        // Content areas are clamped to screen, but texture is always drawn at full size.
+        W = W_FIXED;
+        H = H_FIXED;
         LIST_W = (int)(W * LIST_W_PCT);
 
         var rng = new java.util.Random(42);
@@ -153,7 +152,7 @@ public class NotelyScreen extends Screen {
 
         btnAdd = addRenderableWidget(Button.builder(
                 Component.translatable("notely.button.new_note"), b -> newNote()
-        ).pos(ox + 3, oy + H - TORN - 18).size(LIST_W - 6, 14).build());
+        ).pos(ox + 3, oy + H - TORN - 22).size(LIST_W - 10, 14).build());
 
         btnPin = addRenderableWidget(Button.builder(
                 Component.translatable("notely.button.pin"), b -> toggleColorPicker()
@@ -897,8 +896,9 @@ public class NotelyScreen extends Screen {
 
     private void drawFrame(GuiGraphics g) {
         int x = ox, y = oy;
-        // Background texture via sprite atlas (atlases/gui.json registers notely:gui/notepad)
-        g.blitSprite(RenderPipelines.GUI_TEXTURED, TEX_NOTEPAD, x, y, 512, 512);
+        // Draw background texture: always render full W_FIXED x H_FIXED artwork from 512x512 texture.
+        // If W or H was clamped (small screen), scale the UV region proportionally.
+        g.blit(RenderPipelines.GUI_TEXTURED, TEX_NOTEPAD, x, y, 0, 0, W, H, 512, 512);
         // Toolbar strip
         g.fill(x + LIST_W + 1, y + TORN, x + W, y + TORN + 17, COL_TOOLBAR);
 
@@ -916,7 +916,7 @@ public class NotelyScreen extends Screen {
         g.drawString(font, Component.translatable("notely.list.header").getString(), ox + 4, oy + TORN + 4, MarkdownRenderer.COL_HINT, false);
 
         int clipY1 = oy + TORN + 14, clipY2 = oy + H - TORN - 20;
-        g.enableScissor(ox + 1, clipY1, ox + LIST_W - 1, clipY2);
+        g.enableScissor(ox, clipY1, ox + LIST_W - 1, clipY2);
 
 
         int visible = visibleListRows();
@@ -927,8 +927,8 @@ public class NotelyScreen extends Screen {
             int ry = oy + TORN + 16 + i * ROW_H;
             boolean hov = mx >= ox + 2 && mx < ox + LIST_W - 2 && my >= ry && my < ry + ROW_H;
             boolean isSel = note == selected;
-            if (isSel) g.fill(ox + 2, ry, ox + LIST_W - 2, ry + ROW_H - 2, COL_SEL);
-            else if (hov) g.fill(ox + 2, ry, ox + LIST_W - 2, ry + ROW_H - 2, COL_HOVER);
+            if (isSel) g.fill(ox + 2, ry, ox + LIST_W - 4, ry + ROW_H - 2, COL_SEL);
+            else if (hov) g.fill(ox + 2, ry, ox + LIST_W - 4, ry + ROW_H - 2, COL_HOVER);
             boolean pinned = NotelyData.stickers.stream().anyMatch(s -> s.noteId.equals(note.id));
             int maxTW = LIST_W - (pinned ? 22 : 8);
             g.drawString(font, font.plainSubstrByWidth(note.title, maxTW), ox + 5, ry + 6,
@@ -954,8 +954,8 @@ public class NotelyScreen extends Screen {
     private void drawEditor(GuiGraphics g) {
         int ex = ox + LIST_W + 24; // +2px indent from red margin line
         int titleY = oy + TORN + 18;
-        int contentY = titleY + 16;
-        int clipTop = contentY, clipBot = oy + H - TORN - 20;
+        int contentY = titleY + 18;
+        int clipTop = contentY, clipBot = oy + H - TORN - 10;
 
         if (selected == null) {
             g.drawString(font, Component.translatable("notely.editor.select_note").getString(), ex, contentY + 20, MarkdownRenderer.COL_HINT, false);
@@ -964,7 +964,7 @@ public class NotelyScreen extends Screen {
 
         drawTitle(g, ex, titleY);
 
-        g.enableScissor(ox + LIST_W + 2, clipTop, ox + W - 2, clipBot);
+        g.enableScissor(ox + LIST_W + 2, clipTop, ox + W, clipBot);
         renderedLines.clear();
 
         if (selected.content.isEmpty()) {
