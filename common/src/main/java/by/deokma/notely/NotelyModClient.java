@@ -4,6 +4,7 @@ import by.deokma.notely.gui.NotelyScreen;
 import by.deokma.notely.gui.PinnedNotesOverlay;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.ChatScreen;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWScrollCallbackI;
 
@@ -12,7 +13,7 @@ public class NotelyModClient {
     public static KeyMapping openKey;
 
     public static void init() {
-        NotelyData.load();
+        // Data is loaded per-world via onJoinWorld/onJoinServer
     }
 
     /** Called after the game window is created — safe to access GLFW. */
@@ -103,10 +104,18 @@ public class NotelyModClient {
         screenFactory = factory;
     }
 
+    /**
+     * Returns true if stickers should be visible and interactive on the current screen.
+     * Stickers show in-game (no screen) and over chat, but not over inventory/pause menu/etc.
+     */
+    public static boolean isStickersAllowedOnScreen(Minecraft mc) {
+        return mc.screen == null || mc.screen instanceof ChatScreen;
+    }
+
     public static void onKeyTick() {
         if (openKey != null && openKey.consumeClick()) {
             Minecraft mc = Minecraft.getInstance();
-            if (mc.screen == null) {
+            if (mc.screen == null && NotelyData.isInWorld()) {
                 mc.setScreen(screenFactory.get());
             }
         }

@@ -61,6 +61,7 @@ public class NotelyModFabricClient implements ClientModInitializer {
 
         HudRenderCallback.EVENT.register((gfx, tickDelta) -> {
             Minecraft mc = Minecraft.getInstance();
+            if (!NotelyModClient.isStickersAllowedOnScreen(mc)) return;
             if (!(mc.screen instanceof NotelyScreen)) {
                 PinnedNotesOverlay.render(gfx,
                     mc.getWindow().getGuiScaledWidth(),
@@ -69,7 +70,7 @@ public class NotelyModFabricClient implements ClientModInitializer {
         });
 
         ClientTickEvents.START_CLIENT_TICK.register(mc -> {
-            if (mc.screen instanceof NotelyScreen) return;
+            if (!NotelyModClient.isStickersAllowedOnScreen(mc)) return;
             if (mc.getWindow() == null) return;
 
             long win = NotelyModClient.getGlfwWindow(mc);

@@ -24,12 +24,23 @@ import java.util.List;
 public class NotelyScreen extends Screen {
 
     // ---- Layout constants ----
-    private static final int W = 440;
-    private static final int H = 280;
-    private static final int LIST_W = 130;
-    private static final int TORN = 6;
-    private static final int ROW_H = 22;
+    // W and H are computed from window size (percentage-based), see computeLayout()
+    private static final float W_PCT  = 0.70f;
+    private static final float H_PCT  = 0.75f;
+    private static final int   W_MIN  = 320;
+    private static final int   H_MIN  = 200;
+    private static final int   W_MAX  = 700;
+    private static final int   H_MAX  = 480;
+    private static final float LIST_W_PCT = 0.30f;
+
+    private static final int TORN   = 6;
+    private static final int ROW_H  = 22;
     private static final int LINE_H = 12;
+
+    // Computed each init()
+    private int W      = 440;
+    private int H      = 280;
+    private int LIST_W = 130;
 
     // ---- Color palette ----
     private static final int COL_LIST = 0xFFD8C9A8;
@@ -45,7 +56,8 @@ public class NotelyScreen extends Screen {
     };
 
     // ---- Torn-paper edge ----
-    private final int[] tornTop, tornBot;
+    private int[] tornTop = new int[0];
+    private int[] tornBot = new int[0];
 
     // ---- State ----
     private Note selected = null;
@@ -105,14 +117,6 @@ public class NotelyScreen extends Screen {
 
     public NotelyScreen() {
         super(Component.empty());
-        var rng = new java.util.Random(42);
-        int cols = (W - LIST_W) / 4 + 2;
-        tornTop = new int[cols];
-        tornBot = new int[cols];
-        for (int i = 0; i < cols; i++) {
-            tornTop[i] = rng.nextInt(TORN);
-            tornBot[i] = rng.nextInt(TORN);
-        }
         if (!NotelyData.notes.isEmpty()) {
             selected = NotelyData.notes.get(0);
             cursor = selected.content.length();
@@ -123,8 +127,24 @@ public class NotelyScreen extends Screen {
     // Init
     // =========================================================
 
+    private void computeLayout() {
+        W = Mth.clamp((int)(width  * W_PCT), W_MIN, W_MAX);
+        H = Mth.clamp((int)(height * H_PCT), H_MIN, H_MAX);
+        LIST_W = (int)(W * LIST_W_PCT);
+
+        var rng = new java.util.Random(42);
+        int cols = (W - LIST_W) / 4 + 2;
+        tornTop = new int[cols];
+        tornBot = new int[cols];
+        for (int i = 0; i < cols; i++) {
+            tornTop[i] = rng.nextInt(TORN);
+            tornBot[i] = rng.nextInt(TORN);
+        }
+    }
+
     @Override
     protected void init() {
+        computeLayout();
         ox = (width - W) / 2;
         oy = (height - H) / 2;
         colorBtns.clear();
