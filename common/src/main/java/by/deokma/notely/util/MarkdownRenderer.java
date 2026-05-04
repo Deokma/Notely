@@ -1,6 +1,6 @@
 package by.deokma.notely.util;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.Font;
 
 import java.util.ArrayList;
@@ -86,22 +86,22 @@ public final class MarkdownRenderer {
      *
      * @param editorMaxW width of the editor area (for HR line)
      */
-    public static void drawLine(GuiGraphics g, Font font, String seg,
+    public static void drawLine(GuiGraphicsExtractor g, Font font, String seg,
                                 int x, int y, LineType type, int editorMaxW) {
         switch (type) {
             case H1 -> {
-                g.drawString(font, seg, x, y, COL_H1, false);
+                g.text(font, seg, x, y, COL_H1, false);
                 g.fill(x, y + font.lineHeight, x + font.width(seg), y + font.lineHeight + 1, COL_H1);
             }
-            case H2 -> g.drawString(font, seg, x, y, COL_H2, false);
-            case H3 -> g.drawString(font, seg, x, y, COL_HINT, false);
+            case H2 -> g.text(font, seg, x, y, COL_H2, false);
+            case H3 -> g.text(font, seg, x, y, COL_HINT, false);
             case TODO_OPEN -> {
                 drawCheckbox(g, x - 11, y, false);
-                g.drawString(font, seg, x, y, COL_TEXT, false);
+                g.text(font, seg, x, y, COL_TEXT, false);
             }
             case TODO_DONE -> {
                 drawCheckbox(g, x - 11, y, true);
-                g.drawString(font, seg, x, y, 0xFF888877, false);
+                g.text(font, seg, x, y, 0xFF888877, false);
                 g.fill(x, y + 2, x + font.width(seg), y + 2, 0xFF888877);
             }
             case HR -> {
@@ -110,17 +110,17 @@ public final class MarkdownRenderer {
             }
             case QUOTE -> {
                 g.fill(x - 8, y, x - 6, y + 11, 0xFF8B7355);
-                g.drawString(font, seg, x, y, COL_QUOTE, false);
+                g.text(font, seg, x, y, COL_QUOTE, false);
             }
             case CODE -> {
                 g.fill(x - 2, y - 1, x + font.width(seg) + 2, y + 12, COL_CODE_BG);
-                g.drawString(font, seg, x, y, 0xFF4A7A30, false);
+                g.text(font, seg, x, y, 0xFF4A7A30, false);
             }
-            default -> g.drawString(font, seg, x, y, COL_TEXT, false);
+            default -> g.text(font, seg, x, y, COL_TEXT, false);
         }
     }
 
-    public static void drawCheckbox(GuiGraphics g, int x, int y, boolean checked) {
+    public static void drawCheckbox(GuiGraphicsExtractor g, int x, int y, boolean checked) {
         g.fill(x, y, x + 8, y + 8, 0x33000000);
         if (checked) {
             g.fill(x + 1, y + 1, x + 7, y + 7, COL_CHECKED);

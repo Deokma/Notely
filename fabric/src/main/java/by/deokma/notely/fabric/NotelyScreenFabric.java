@@ -19,7 +19,7 @@ public class NotelyScreenFabric extends NotelyScreen {
     public boolean charTyped(CharacterEvent event) {
         int cp = event.codepoint();
         if (cp > 0 && cp <= 0xFFFF) {
-            return charTyped((char) cp, event.modifiers());
+            return charTyped((char) cp, 0);
         }
         return false;
     }

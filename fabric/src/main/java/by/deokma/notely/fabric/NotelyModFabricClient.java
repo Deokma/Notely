@@ -1,15 +1,18 @@
 package by.deokma.notely.fabric;
 
+import by.deokma.notely.NotelyMod;
 import by.deokma.notely.NotelyModClient;
-import by.deokma.notely.gui.PinnedNotesOverlay;
 import by.deokma.notely.gui.NotelyScreen;
+import by.deokma.notely.gui.PinnedNotesOverlay;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.resources.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 public class NotelyModFabricClient implements ClientModInitializer {
@@ -19,7 +22,7 @@ public class NotelyModFabricClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         NotelyModClient.init();
-        KeyBindingHelper.registerKeyBinding(NotelyModClient.createKeyMapping());
+        KeyMappingHelper.registerKeyMapping(NotelyModClient.createKeyMapping());
         NotelyModClient.setScreenFactory(NotelyScreenFabric::new);
 
         // World/server context switching
@@ -42,7 +45,7 @@ public class NotelyModFabricClient implements ClientModInitializer {
         });
 
         ClientPlayConnectionEvents.DISCONNECT.register((handler, mc) ->
-            NotelyModClient.onLeave()
+                NotelyModClient.onLeave()
         );
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> NotelyModClient.onKeyTick());
@@ -50,6 +53,7 @@ public class NotelyModFabricClient implements ClientModInitializer {
         // Init GLFW scroll callback once window is ready (first tick)
         ClientTickEvents.START_CLIENT_TICK.register(new ClientTickEvents.StartTick() {
             private boolean initialized = false;
+
             @Override
             public void onStartTick(Minecraft mc) {
                 if (!initialized && mc.getWindow() != null) {
@@ -59,15 +63,19 @@ public class NotelyModFabricClient implements ClientModInitializer {
             }
         });
 
-        HudRenderCallback.EVENT.register((gfx, tickDelta) -> {
-            Minecraft mc = Minecraft.getInstance();
-            if (!NotelyModClient.isStickersAllowedOnScreen(mc)) return;
-            if (!(mc.screen instanceof NotelyScreen)) {
-                PinnedNotesOverlay.render(gfx,
-                    mc.getWindow().getGuiScaledWidth(),
-                    mc.getWindow().getGuiScaledHeight());
-            }
-        });
+        HudElementRegistry.attachElementBefore(
+                VanillaHudElements.CHAT,
+                Identifier.fromNamespaceAndPath(NotelyMod.MOD_ID, "pinned_notes"),
+                (gfx, tickCounter) -> {
+                    Minecraft mc = Minecraft.getInstance();
+                    if (!NotelyModClient.isStickersAllowedOnScreen(mc)) return;
+                    if (!(mc.screen instanceof NotelyScreen)) {
+                        PinnedNotesOverlay.render(gfx,
+                                mc.getWindow().getGuiScaledWidth(),
+                                mc.getWindow().getGuiScaledHeight());
+                    }
+                }
+        );
 
         ClientTickEvents.START_CLIENT_TICK.register(mc -> {
             if (!NotelyModClient.isStickersAllowedOnScreen(mc)) return;

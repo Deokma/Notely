@@ -5,7 +5,7 @@ import by.deokma.notely.NotelyData.Note;
 import by.deokma.notely.util.MarkdownRenderer;
 import by.deokma.notely.util.MarkdownRenderer.LineType;
 import by.deokma.notely.util.TextCursor;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -268,7 +268,7 @@ public class NotelyScreen extends Screen {
     // =========================================================
 
     @Override
-    public void renderBackground(GuiGraphics g, int mx, int my, float dt) {
+    public void extractBackground(GuiGraphicsExtractor g, int mx, int my, float dt) {
     }
 
     @Override
@@ -885,20 +885,20 @@ public class NotelyScreen extends Screen {
     // =========================================================
 
     @Override
-    public void render(GuiGraphics g, int mx, int my, float dt) {
+    public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float dt) {
         drawFrame(g);
         drawList(g, mx, my);
         drawEditor(g);
-        super.render(g, mx, my, dt);
+        super.extractRenderState(g, mx, my, dt);
         drawColorPickerOverlay(g);
         drawContextMenu(g);
     }
 
-    private void drawFrame(GuiGraphics g) {
+    private void drawFrame(GuiGraphicsExtractor g) {
         int x = ox, y = oy;
         // Draw background texture: always render full W_FIXED x H_FIXED artwork from 512x512 texture.
         // If W or H was clamped (small screen), scale the UV region proportionally.
-        g.blit(RenderPipelines.GUI_TEXTURED, TEX_NOTEPAD, x, y, 0, 0, W, H, 512, 512);
+        g.blit(RenderPipelines.GUI_TEXTURED, TEX_NOTEPAD, x, y, 0, 0, W, H, 512, 492);
         // Toolbar strip
         g.fill(x + LIST_W + 1, y + TORN, x + W, y + TORN + 17, COL_TOOLBAR);
 
@@ -912,8 +912,8 @@ public class NotelyScreen extends Screen {
         }
     }
 
-    private void drawList(GuiGraphics g, int mx, int my) {
-        g.drawString(font, Component.translatable("notely.list.header").getString(), ox + 4, oy + TORN + 4, MarkdownRenderer.COL_HINT, false);
+    private void drawList(GuiGraphicsExtractor g, int mx, int my) {
+        g.text(font, Component.translatable("notely.list.header").getString(), ox + 4, oy + TORN + 4, MarkdownRenderer.COL_HINT, false);
 
         int clipY1 = oy + TORN + 14, clipY2 = oy + H - TORN - 20;
         g.enableScissor(ox, clipY1, ox + LIST_W - 1, clipY2);
@@ -931,10 +931,10 @@ public class NotelyScreen extends Screen {
             else if (hov) g.fill(ox + 2, ry, ox + LIST_W - 4, ry + ROW_H - 2, COL_HOVER);
             boolean pinned = NotelyData.stickers.stream().anyMatch(s -> s.noteId.equals(note.id));
             int maxTW = LIST_W - (pinned ? 22 : 8);
-            g.drawString(font, font.plainSubstrByWidth(note.title, maxTW), ox + 5, ry + 6,
+            g.text(font, font.plainSubstrByWidth(note.title, maxTW), ox + 5, ry + 6,
                     isSel ? MarkdownRenderer.COL_TEXT : MarkdownRenderer.COL_HINT, false);
             if (pinned)
-                g.drawString(font, Component.translatable("notely.list.pinned_marker").getString(), ox + LIST_W - 10, ry + 6, 0xFFFF8800, false);
+                g.text(font, Component.translatable("notely.list.pinned_marker").getString(), ox + LIST_W - 10, ry + 6, 0xFFFF8800, false);
         }
 
         g.disableScissor();
@@ -951,14 +951,14 @@ public class NotelyScreen extends Screen {
         }
     }
 
-    private void drawEditor(GuiGraphics g) {
+    private void drawEditor(GuiGraphicsExtractor g) {
         int ex = ox + LIST_W + 24; // +2px indent from red margin line
         int titleY = oy + TORN + 18;
         int contentY = titleY + 18;
         int clipTop = contentY, clipBot = oy + H - TORN - 10;
 
         if (selected == null) {
-            g.drawString(font, Component.translatable("notely.editor.select_note").getString(), ex, contentY + 20, MarkdownRenderer.COL_HINT, false);
+            g.text(font, Component.translatable("notely.editor.select_note").getString(), ex, contentY + 20, MarkdownRenderer.COL_HINT, false);
             return;
         }
 
@@ -968,7 +968,7 @@ public class NotelyScreen extends Screen {
         renderedLines.clear();
 
         if (selected.content.isEmpty()) {
-            g.drawString(font, Component.translatable("notely.editor.start_writing").getString(), ex, contentY, MarkdownRenderer.COL_HINT, false);
+            g.text(font, Component.translatable("notely.editor.start_writing").getString(), ex, contentY, MarkdownRenderer.COL_HINT, false);
         }
 
         drawContent(g, ex, contentY, clipTop, clipBot);
@@ -977,7 +977,7 @@ public class NotelyScreen extends Screen {
         g.disableScissor();
     }
 
-    private void drawTitle(GuiGraphics g, int ex, int titleY) {
+    private void drawTitle(GuiGraphicsExtractor g, int ex, int titleY) {
         if (renamingTitle) {
             g.fill(ex - 2, titleY - 1, ox + W - 22, titleY + 11, 0x33FFFFFF);
             // Selection highlight
@@ -986,20 +986,20 @@ public class NotelyScreen extends Screen {
                 int x2 = ex + font.width(titleBuffer.substring(0, titleSelMax()));
                 g.fill(x1, titleY, x2, titleY + 9, 0x664488FF);
             }
-            g.drawString(font, titleBuffer, ex, titleY + 1, MarkdownRenderer.COL_TEXT, false);
+            g.text(font, titleBuffer, ex, titleY + 1, MarkdownRenderer.COL_TEXT, false);
             if (cursorVisible) {
                 int cx = ex + font.width(titleBuffer.substring(0, titleCursor));
                 g.fill(cx, titleY - 1, cx + 1, titleY + 10, MarkdownRenderer.COL_TEXT);
             }
-            g.drawString(font, Component.translatable("notely.editor.rename_hint").getString(), ox + LIST_W + 210, titleY + 1, MarkdownRenderer.COL_HINT, false);
+            g.text(font, Component.translatable("notely.editor.rename_hint").getString(), ox + LIST_W + 210, titleY + 1, MarkdownRenderer.COL_HINT, false);
         } else {
             String title = font.plainSubstrByWidth(selected.title, W - LIST_W - 70);
-            g.drawString(font, title, ex, titleY + 1, MarkdownRenderer.COL_TEXT, false);
-            g.drawString(font, Component.translatable("notely.editor.click_to_rename").getString(), ex + font.width(title), titleY + 1, MarkdownRenderer.COL_HINT, false);
+            g.text(font, title, ex, titleY + 1, MarkdownRenderer.COL_TEXT, false);
+            g.text(font, Component.translatable("notely.editor.click_to_rename").getString(), ex + font.width(title), titleY + 1, MarkdownRenderer.COL_HINT, false);
         }
     }
 
-    private void drawContent(GuiGraphics g, int ex, int contentY, int clipTop, int clipBot) {
+    private void drawContent(GuiGraphicsExtractor g, int ex, int contentY, int clipTop, int clipBot) {
         String text = selected.content;
         String[] rawLines = text.split("\n", -1);
         int dy = contentY - textOffset * LINE_H;
@@ -1073,7 +1073,7 @@ public class NotelyScreen extends Screen {
         }
     }
 
-    private void drawContentScrollbar(GuiGraphics g, int clipTop, int clipBot) {
+    private void drawContentScrollbar(GuiGraphicsExtractor g, int clipTop, int clipBot) {
         int total = countTextLines(), vis = visibleEditorLines();
         if (total > vis) {
             float scroll = (float) textOffset / (total - vis);
@@ -1085,7 +1085,7 @@ public class NotelyScreen extends Screen {
         }
     }
 
-    private void drawContextMenu(GuiGraphics g) {
+    private void drawContextMenu(GuiGraphicsExtractor g) {
         if (contextMenuNoteIdx < 0) return;
         int itemH = 14, menuW = 90;
         String[] items = {
@@ -1099,16 +1099,16 @@ public class NotelyScreen extends Screen {
             int iy = contextMenuY + i * itemH;
             if (i == items.length - 1) {
                 g.fill(contextMenuX, iy, contextMenuX + menuW, iy + itemH, 0xFFEED8D8);
-                g.drawString(font, items[i], contextMenuX + 4, iy + 3, 0xFFAA4444, false);
+                g.text(font, items[i], contextMenuX + 4, iy + 3, 0xFFAA4444, false);
             } else {
-                g.drawString(font, items[i], contextMenuX + 4, iy + 3, MarkdownRenderer.COL_TEXT, false);
+                g.text(font, items[i], contextMenuX + 4, iy + 3, MarkdownRenderer.COL_TEXT, false);
             }
             if (i < items.length - 1)
                 g.fill(contextMenuX, iy + itemH - 1, contextMenuX + menuW, iy + itemH, 0x33000000);
         }
     }
 
-    private void drawColorPickerOverlay(GuiGraphics g) {
+    private void drawColorPickerOverlay(GuiGraphicsExtractor g) {
         if (!pickingColor || colorBtns.isEmpty()) return;
         Button first = colorBtns.get(0);
         int baseX = first.getX();

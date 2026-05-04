@@ -7,7 +7,7 @@ import by.deokma.notely.NotelyModClient;
 import by.deokma.notely.util.MarkdownRenderer;
 import by.deokma.notely.util.MarkdownRenderer.LineType;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 import java.util.List;
 
@@ -29,7 +29,7 @@ public class PinnedNotesOverlay {
     // =========================================================
 
     public static void render(Object gfxObj, int sw, int sh) {
-        if (!(gfxObj instanceof GuiGraphics gfx)) return;
+        if (!(gfxObj instanceof GuiGraphicsExtractor gfx)) return;
         if (!NotelyData.isInWorld()) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.options.hideGui) return;
@@ -41,7 +41,7 @@ public class PinnedNotesOverlay {
         }
     }
 
-    private static void drawSticker(GuiGraphics gfx, Minecraft mc, Sticker s, int mx, int my) {
+    private static void drawSticker(GuiGraphicsExtractor gfx, Minecraft mc, Sticker s, int mx, int my) {
         Note note = NotelyData.findNote(s.noteId);
         int x = (int) s.x, y = (int) s.y, w = (int) s.width, h = (int) s.height;
 
@@ -58,18 +58,18 @@ public class PinnedNotesOverlay {
         int cx = x + w - HEADER + 1;
         boolean closeHov = mx >= cx && mx < x + w && my >= y && my < y + HEADER;
         if (closeHov) gfx.fill(cx, y + 1, x + w - 1, y + HEADER - 1, 0xAAFF4444);
-        gfx.drawString(mc.font, "x", cx + 2, y + 3, closeHov ? 0xFFFFFFFF : 0xFF555555, false);
+        gfx.text(mc.font, "x", cx + 2, y + 3, closeHov ? 0xFFFFFFFF : 0xFF555555, false);
 
         // Transparency toggle button
         int tx2 = cx - HEADER;
         boolean transHov = mx >= tx2 && mx < cx && my >= y && my < y + HEADER;
         int transColor = s.transparent ? 0xFF4488CC : 0xFF888888;
         if (transHov) gfx.fill(tx2, y + 1, cx - 1, y + HEADER - 1, 0x44FFFFFF);
-        gfx.drawString(mc.font, s.transparent ? "o" : "O", tx2 + 2, y + 3, transColor, false);
+        gfx.text(mc.font, s.transparent ? "o" : "O", tx2 + 2, y + 3, transColor, false);
 
         // Title
         String title = note != null ? mc.font.plainSubstrByWidth(note.title, w - HEADER * 2 - 6) : "?";
-        gfx.drawString(mc.font, title, x + 4, y + 3, 0xFF333333, false);
+        gfx.text(mc.font, title, x + 4, y + 3, 0xFF333333, false);
 
         // Ruled lines
         for (int row = 0; row < (h - HEADER) / LINE_H; row++) {
@@ -133,7 +133,7 @@ public class PinnedNotesOverlay {
         }
     }
 
-    private static void drawStickerLine(GuiGraphics gfx, Minecraft mc, Sticker s,
+    private static void drawStickerLine(GuiGraphicsExtractor gfx, Minecraft mc, Sticker s,
                                         String line, int x, int ty, int w, int mx, int my, int alpha) {
         int ink = (alpha << 24) | 0x001A0A00;
         LineType type = MarkdownRenderer.detectLineType(line);
@@ -142,41 +142,41 @@ public class PinnedNotesOverlay {
         switch (type) {
             case H1 -> {
                 String t = mc.font.plainSubstrByWidth(line.substring(2), maxW);
-                gfx.drawString(mc.font, t, x + PAD, ty, (alpha << 24) | 0x003A2000, false);
+                gfx.text(mc.font, t, x + PAD, ty, (alpha << 24) | 0x003A2000, false);
                 gfx.fill(x + PAD, ty + LINE_H - 1, x + PAD + mc.font.width(t), ty + LINE_H, (alpha << 24) | 0x003A2000);
             }
             case H2 ->
-                    gfx.drawString(mc.font, mc.font.plainSubstrByWidth(line.substring(3), maxW), x + PAD, ty, (alpha << 24) | 0x005A3800, false);
+                    gfx.text(mc.font, mc.font.plainSubstrByWidth(line.substring(3), maxW), x + PAD, ty, (alpha << 24) | 0x005A3800, false);
             case H3 ->
-                    gfx.drawString(mc.font, mc.font.plainSubstrByWidth(line.substring(4), maxW), x + PAD, ty, (alpha << 24) | 0x009B8A6A, false);
+                    gfx.text(mc.font, mc.font.plainSubstrByWidth(line.substring(4), maxW), x + PAD, ty, (alpha << 24) | 0x009B8A6A, false);
             case HR -> {
                 int mid = ty + LINE_H / 2;
                 gfx.fill(x + PAD, mid, x + w - PAD, mid + 1, (alpha << 24) | 0x008B7355);
             }
             case QUOTE -> {
                 gfx.fill(x + PAD, ty, x + PAD + 2, ty + LINE_H - 1, (alpha << 24) | 0x008B7355);
-                gfx.drawString(mc.font, mc.font.plainSubstrByWidth(line.substring(2), maxW - 4), x + PAD + 4, ty, (alpha << 24) | 0x007A6A50, false);
+                gfx.text(mc.font, mc.font.plainSubstrByWidth(line.substring(2), maxW - 4), x + PAD + 4, ty, (alpha << 24) | 0x007A6A50, false);
             }
             case CODE -> {
                 String code = line.substring(1, line.length() - 1);
                 String fit = mc.font.plainSubstrByWidth(code, maxW - 4);
                 gfx.fill(x + PAD - 1, ty - 1, x + PAD + mc.font.width(fit) + 3, ty + LINE_H, 0x22000000);
-                gfx.drawString(mc.font, fit, x + PAD + 1, ty, (alpha << 24) | 0x004A7A30, false);
+                gfx.text(mc.font, fit, x + PAD + 1, ty, (alpha << 24) | 0x004A7A30, false);
             }
             case TODO_OPEN, TODO_DONE ->
                     drawStickerTodo(gfx, mc, s, line, x, ty, w, mx, my, alpha, ink, type == LineType.TODO_DONE);
-            default -> gfx.drawString(mc.font, mc.font.plainSubstrByWidth(line, maxW), x + PAD, ty, ink, false);
+            default -> gfx.text(mc.font, mc.font.plainSubstrByWidth(line, maxW), x + PAD, ty, ink, false);
         }
     }
 
-    private static void drawStickerTodo(GuiGraphics gfx, Minecraft mc, Sticker s,
+    private static void drawStickerTodo(GuiGraphicsExtractor gfx, Minecraft mc, Sticker s,
                                         String line, int x, int ty, int w, int mx, int my, int alpha, int ink, boolean done) {
         MarkdownRenderer.drawCheckbox(gfx, x + PAD, ty, done);
         boolean hov = mx >= x + PAD && mx < x + PAD + 9 && my >= ty && my < ty + 7;
         if (hov) gfx.fill(x + PAD - 1, ty - 1, x + PAD + 8, ty + 8, 0x44FFFFFF);
         String todoText = mc.font.plainSubstrByWidth(line.substring(4), w - PAD * 2 - 10);
         int todoColor = done ? (alpha << 24) | 0x00888877 : ink;
-        gfx.drawString(mc.font, todoText, x + PAD + 10, ty, todoColor, false);
+        gfx.text(mc.font, todoText, x + PAD + 10, ty, todoColor, false);
         if (done) gfx.fill(x + PAD + 10, ty + 4, x + PAD + 10 + mc.font.width(todoText), ty + 5, todoColor);
     }
 

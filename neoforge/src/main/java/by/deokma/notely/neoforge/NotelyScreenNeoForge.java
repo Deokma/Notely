@@ -20,7 +20,7 @@ public class NotelyScreenNeoForge extends NotelyScreen {
         // CharacterEvent.codepoint() returns an int codepoint; cast to char for BMP characters
         int cp = event.codepoint();
         if (cp > 0 && cp <= 0xFFFF) {
-            return charTyped((char) cp, event.modifiers());
+            return charTyped((char) cp, 0);
         }
         return false;
     }
